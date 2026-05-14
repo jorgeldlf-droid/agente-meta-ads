@@ -28,11 +28,11 @@ const rotas = [
     endpoint: "/ideias-reels",
   },
   {
-  id: "gerar-posts",
-  titulo: "Gerar Posts",
-  subtitulo: "Posts automáticos com dúvidas + fornecedores",
-  endpoint: "/gerar-posts",
-},
+    id: "gerar-posts",
+    titulo: "Gerar Posts",
+    subtitulo: "Posts automáticos com dúvidas + fornecedores",
+    endpoint: "/gerar-posts",
+  },
   {
     id: "tendencias",
     titulo: "Tendências das Fábricas",
@@ -50,16 +50,169 @@ function numero(valor) {
   return Number(valor).toLocaleString("pt-BR");
 }
 
-function textoCurto(texto, tamanho = 150) {
-  if (!texto) return "Sem legenda";
-  return texto.length > tamanho ? texto.slice(0, tamanho) + "..." : texto;
+function limparMarkdownBasico(texto) {
+  return String(texto || "")
+    .replace(/\*\*/g, "")
+    .replace(/__/g, "")
+    .replace(/`/g, "")
+    .replace(/^[-•]\s*/, "")
+    .trim();
+}
+
+function detectarTipoLinha(linha) {
+  const texto = limparMarkdownBasico(linha);
+  const lower = texto.toLowerCase();
+
+  if (!texto) return "space";
+
+  if (texto.startsWith("#") || /^\d+\./.test(texto) || /^dia\s+\d+/i.test(texto)) {
+    return "title";
+  }
+
+  if (
+    lower.includes("imagem oficial") ||
+    lower.includes("imagem de fornecedor") ||
+    lower.includes("foto oficial") ||
+    lower.includes("fornecedor ideal") ||
+    lower.includes("tipo de imagem oficial")
+  ) {
+    return "officialImage";
+  }
+
+  if (
+    lower.includes("prompt ia") ||
+    lower.includes("prompt de imagem ia") ||
+    lower.includes("imagem criada por ia") ||
+    lower.includes("prompt para imagem") ||
+    lower.includes("prompt imagem ia")
+  ) {
+    return "aiImage";
+  }
+
+  if (
+    lower.includes("formato da imagem") ||
+    lower.includes("formato recomendado") ||
+    lower.includes("formato:")
+  ) {
+    return "format";
+  }
+
+  if (
+    lower.includes("observação comercial") ||
+    lower.includes("observacao comercial") ||
+    lower.includes("qual imagem usar")
+  ) {
+    return "note";
+  }
+
+  if (
+    lower.includes("legenda") ||
+    lower.includes("cta") ||
+    lower.includes("gancho") ||
+    lower.includes("tema") ||
+    lower.includes("tipo") ||
+    lower.includes("público") ||
+    lower.includes("publico")
+  ) {
+    return "detail";
+  }
+
+  return "paragraph";
+}
+
+function LinhaAnalise({ linha, index }) {
+  const [copiado, setCopiado] = useState(false);
+
+  const tipo = detectarTipoLinha(linha);
+  const texto = limparMarkdownBasico(linha).replaceAll("#", "").trim();
+
+  async function copiarPrompt() {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      alert("Não consegui copiar automaticamente. Selecione o texto e copie manualmente.");
+    }
+  }
+
+  if (tipo === "space") return <div key={index} style={styles.analysisSpace} />;
+
+  if (tipo === "title") {
+    return (
+      <h3 key={index} style={styles.analysisTitle}>
+        {texto}
+      </h3>
+    );
+  }
+
+  if (tipo === "officialImage") {
+    return (
+      <div key={index} style={styles.imageSuggestionCard}>
+        <div style={styles.cardMiniTag}>IMAGEM OFICIAL SUGERIDA</div>
+        <p style={styles.imageSuggestionText}>{texto}</p>
+      </div>
+    );
+  }
+
+  if (tipo === "aiImage") {
+    return (
+      <div key={index} style={styles.aiSuggestionCard}>
+        <div style={styles.aiCardHeader}>
+          <div style={styles.cardMiniTagDark}>PROMPT PARA IMAGEM IA</div>
+
+          <button onClick={copiarPrompt} style={styles.copyButton}>
+            {copiado ? "Copiado!" : "Copiar Prompt IA"}
+          </button>
+        </div>
+
+        <p style={styles.imageSuggestionText}>{texto}</p>
+      </div>
+    );
+  }
+
+  if (tipo === "format") {
+    return (
+      <div key={index} style={styles.formatCard}>
+        <strong>Formato recomendado:</strong> {texto}
+      </div>
+    );
+  }
+
+  if (tipo === "note") {
+    return (
+      <div key={index} style={styles.noteCard}>
+        <strong>Observação comercial:</strong> {texto}
+      </div>
+    );
+  }
+
+  if (tipo === "detail") {
+    return (
+      <p key={index} style={styles.analysisBullet}>
+        {texto}
+      </p>
+    );
+  }
+
+  return (
+    <p key={index} style={styles.analysisParagraph}>
+      {texto}
+    </p>
+  );
+}
+
+function formatarAnalise(texto) {
+  if (!texto) return null;
+
+  return texto.split("\n").map((linha, index) => (
+    <LinhaAnalise key={index} linha={linha} index={index} />
+  ));
 }
 
 function resumoMetricas(data) {
   const fonte = data?.promocaoVigente || data?.top10 || data?.midias || [];
   const lista = Array.isArray(fonte) ? fonte : [];
-
-  const melhor = [...lista].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
 
   const alcance = lista.reduce((acc, item) => acc + (item.reach || 0), 0);
   const interacoes = lista.reduce((acc, item) => acc + (item.totalInteractions || 0), 0);
@@ -67,57 +220,15 @@ function resumoMetricas(data) {
 
   return {
     total: lista.length,
-    melhor,
     alcance,
     interacoes,
     compartilhamentos,
   };
 }
 
-function limparMarkdownBasico(texto) {
-  return String(texto || "")
-    .replace(/\*\*/g, "")
-    .replace(/__/g, "")
-    .replace(/`/g, "")
-    .trim();
-}
-
-function formatarAnalise(texto) {
-  if (!texto) return null;
-
-  return texto
-    .split("\n")
-    .map((linha, index) => {
-      const limpa = limparMarkdownBasico(linha);
-
-      if (!limpa) return <div key={index} style={styles.analysisSpace} />;
-
-      if (
-        limpa.startsWith("#") ||
-        /^\d+\./.test(limpa) ||
-        limpa.startsWith("##")
-      ) {
-        return (
-          <h3 key={index} style={styles.analysisTitle}>
-            {limpa.replaceAll("#", "").trim()}
-          </h3>
-        );
-      }
-
-      if (limpa.startsWith("-") || limpa.startsWith("•")) {
-        return (
-          <p key={index} style={styles.analysisBullet}>
-            {limpa}
-          </p>
-        );
-      }
-
-      return (
-        <p key={index} style={styles.analysisParagraph}>
-          {limpa}
-        </p>
-      );
-    });
+function textoCurto(texto, tamanho = 150) {
+  if (!texto) return "Sem legenda";
+  return texto.length > tamanho ? texto.slice(0, tamanho) + "..." : texto;
 }
 
 function ConteudoCard({ item, index }) {
@@ -210,18 +321,14 @@ export default function App() {
       <div style={styles.shell}>
         <header style={styles.header}>
           <div style={styles.logoBox}>
-            <img
-              src="/logo-porcelanato-shop.png"
-              alt="Porcelanato Shop"
-              style={styles.logo}
-            />
+            <img src="/logo-porcelanato-shop.png" alt="Porcelanato Shop" style={styles.logo} />
           </div>
 
           <div style={styles.headerInfo}>
             <span style={styles.systemTag}>CENTRAL INTERNA DE MARKETING</span>
             <h1 style={styles.title}>Painel IA Porcelanato Shop</h1>
             <p style={styles.subtitle}>
-              Insights, ideias de conteúdo, tendências e decisões de impulsionamento em um só lugar.
+              Insights, ideias de conteúdo, tendências, imagens sugeridas e decisões de marketing em um só lugar.
             </p>
           </div>
         </header>
@@ -299,9 +406,7 @@ export default function App() {
               {!data && !loading && !erro && (
                 <div style={styles.emptyBox}>
                   <h3>Selecione um módulo para iniciar</h3>
-                  <p>
-                    O painel vai buscar dados reais do agente e organizar a resposta aqui de forma mais clara.
-                  </p>
+                  <p>O painel vai buscar dados reais do agente e organizar a resposta aqui.</p>
                 </div>
               )}
 
@@ -319,11 +424,7 @@ export default function App() {
                 </div>
               )}
 
-              {analise && (
-                <div style={styles.analysisBox}>
-                  {formatarAnalise(analise)}
-                </div>
-              )}
+              {analise && <div style={styles.analysisBox}>{formatarAnalise(analise)}</div>}
             </section>
 
             {listaConteudos.length > 0 && (
@@ -641,11 +742,12 @@ const styles = {
 
   analysisTitle: {
     color: "#ff6b1a",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 900,
-    margin: "24px 0 10px",
+    margin: "30px 0 14px",
     borderTop: "1px solid #eeeeee",
-    paddingTop: 18,
+    paddingTop: 20,
+    textAlign: "center",
   },
 
   analysisParagraph: {
@@ -658,12 +760,101 @@ const styles = {
   analysisBullet: {
     background: "#f4f4f4",
     borderLeft: "4px solid #ff6b1a",
-    padding: "8px 12px",
-    borderRadius: 8,
+    padding: "10px 14px",
+    borderRadius: 10,
     fontSize: 15,
     color: "#333333",
     margin: "8px 0",
     overflowWrap: "break-word",
+  },
+
+  imageSuggestionCard: {
+    background: "#fff7f2",
+    border: "1px solid #ffd2ba",
+    borderLeft: "6px solid #ff6b1a",
+    borderRadius: 16,
+    padding: 16,
+    margin: "12px 0",
+    boxShadow: "0 8px 20px rgba(255,107,26,0.08)",
+  },
+
+  aiSuggestionCard: {
+    background: "#eeeeee",
+    border: "1px solid #d9d9d9",
+    borderLeft: "6px solid #252525",
+    borderRadius: 16,
+    padding: 16,
+    margin: "12px 0",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+  },
+
+  aiCardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+    flexWrap: "wrap",
+  },
+
+  copyButton: {
+    background: "#ff6b1a",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: 999,
+    padding: "8px 14px",
+    fontSize: 12,
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: "0 8px 18px rgba(255,107,26,0.25)",
+  },
+
+  cardMiniTag: {
+    display: "inline-block",
+    background: "#ff6b1a",
+    color: "#ffffff",
+    borderRadius: 999,
+    padding: "5px 10px",
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+
+  cardMiniTagDark: {
+    display: "inline-block",
+    background: "#252525",
+    color: "#ffffff",
+    borderRadius: 999,
+    padding: "5px 10px",
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: 1,
+  },
+
+  imageSuggestionText: {
+    margin: 0,
+    color: "#2b2b2b",
+    fontSize: 15,
+    lineHeight: 1.6,
+  },
+
+  formatCard: {
+    background: "#ffffff",
+    border: "1px solid #dddddd",
+    borderRadius: 14,
+    padding: "12px 14px",
+    margin: "10px 0",
+    color: "#333333",
+  },
+
+  noteCard: {
+    background: "#252525",
+    color: "#ffffff",
+    borderRadius: 14,
+    padding: "13px 15px",
+    margin: "12px 0",
+    lineHeight: 1.55,
   },
 
   contentsSection: {
