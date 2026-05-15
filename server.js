@@ -267,25 +267,73 @@ Inclua:
   }
 });
 
-app.post("/top-conteudos", async (req, res) => {
+async function topConteudosHandler(req, res) {
   try {
-    const analise = await gerarTextoIA(`
-Liste 10 tipos de conteúdos com maior potencial para uma loja de porcelanatos no Instagram.
+    const token = process.env.META_ACCESS_TOKEN;
+    if (!token) {
+      return res.status(400).json({ erro: "META_ACCESS_TOKEN não configurado no .env" });
+    }
 
-Inclua:
-- tipo de conteúdo
-- por que funciona
-- exemplo de gancho
-- sugestão de imagem
-- prompt de imagem IA
-`, 1200);
+    // 1. Descobrir IG Account ID
+    const pageRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`);
+    const pageData = await pageRes.json();
+    
+    const igAccount = pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id;
+    if (!igAccount) {
+      return res.status(400).json({ erro: "Nenhuma conta Instagram vinculada identificada." });
+    }
 
-    res.json({ analise });
+    // 2. Buscar mídias e métricas
+    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp&limit=50&access_token=${token}`);
+    const mediaData = await mediaRes.json();
+    
+    if (!mediaData.data) {
+      return res.status(400).json({ erro: "Não foi possível resgatar as mídias do Instagram." });
+    }
+
+    // 3. Processar e Calcular Métricas (Top 10)
+    const postsTratados = mediaData.data.map(m => {
+      const likes = m.like_count || 0;
+      const comments = m.comments_count || 0;
+      
+      const reach = m.reach || 0;
+      const shares = m.shares || 0;
+      const saves = m.saves || 0;
+      
+      const interacoes = likes + comments + shares + saves;
+      
+      let engajamento = reach > 0 ? ((interacoes / reach) * 100).toFixed(2) : interacoes;
+
+      let imagemSegura = null;
+      if (m.media_type === "VIDEO") {
+        imagemSegura = m.thumbnail_url || null;
+      } else if (m.media_type === "IMAGE" || m.media_type === "CAROUSEL_ALBUM") {
+        imagemSegura = m.media_url || null;
+      }
+      
+      const legendaSegura = typeof m.caption === "string" 
+        ? (m.caption.length > 120 ? m.caption.slice(0, 120) + "..." : m.caption) 
+        : "Sem legenda";
+      
+      return {
+        id: m.id, tipo: m.media_type, imagem: imagemSegura,
+        legenda: legendaSegura,
+        likes, comments, shares, saves, reach, interacoes, engajamento,
+        data: new Date(m.timestamp).toLocaleDateString("pt-BR")
+      };
+    });
+
+    const top10 = postsTratados.sort((a, b) => b.interacoes - a.interacoes).slice(0, 10);
+
+    res.json({ success: true, topConteudos: top10 });
   } catch (error) {
     console.error("Erro /top-conteudos:", error);
-    res.status(500).json({ erro: "Erro ao gerar top conteúdos" });
+    res.status(500).json({ erro: "Erro ao buscar conteúdos reais na Meta API" });
   }
-});
+}
+
+app.get("/top-conteudos", topConteudosHandler);
+app.post("/top-conteudos", topConteudosHandler);
 
 app.post("/instagram-insights", async (req, res) => {
   try {

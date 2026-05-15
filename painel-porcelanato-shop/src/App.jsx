@@ -280,12 +280,68 @@ function PostCard({ post, index, onGerarImagem, gerando }) {
   );
 }
 
+// NOVO COMPONENTE: Exibe dados da Meta
+function TopContentCard({ post, ranking }) {
+  return (
+    <div style={styles.postCard}>
+      <h3 style={styles.postDay}>RANKING #{ranking}</h3>
+
+      <div style={styles.postInfo}>
+        <p><strong>Tipo:</strong> {post.tipo || "POST"}</p>
+        <p><strong>Data:</strong> {post.data || "-"}</p>
+        <p><strong>Legenda:</strong> {post.legenda || "-"}</p>
+      </div>
+
+      <div style={styles.realOfficialBox}>
+        <div style={styles.cardMiniTag}>MÍDIA REAL (INSTAGRAM)</div>
+        {post.imagem ? (
+          <>
+            <img 
+              src={post.imagem} 
+              alt="Thumbnail" 
+              style={styles.officialImage}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                const fallback = document.getElementById(`fallback-${post.id}`);
+                if (fallback) fallback.style.display = "block";
+              }}
+            />
+            <p id={`fallback-${post.id}`} style={{ ...styles.noOfficialText, display: "none" }}>
+              Imagem indisponível para preview seguro
+            </p>
+          </>
+        ) : (
+          <p style={styles.noOfficialText}>Imagem indisponível para preview seguro</p>
+        )}
+      </div>
+
+      <div style={styles.aiPostBox}>
+        <div style={styles.aiPostHeader}>
+          <div style={{ width: "100%" }}>
+            <div style={styles.cardMiniTagDark}>MÉTRICAS DO CONTEÚDO</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginTop: "12px", color: "#2d2d2d", fontSize: "14px" }}>
+              <div><strong>👍 Likes:</strong> {post.likes}</div>
+              <div><strong>💬 Coments:</strong> {post.comments}</div>
+              <div><strong>↗️ Shares:</strong> {post.shares}</div>
+              <div><strong>💾 Saves:</strong> {post.saves}</div>
+              <div><strong>👀 Alcance:</strong> {post.reach || "-"}</div>
+              <div><strong>🔥 Interações:</strong> {post.interacoes}</div>
+              <div><strong>📈 Engajamento:</strong> {post.engajamento}{post.reach > 0 ? "%" : ""}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [selecionada, setSelecionada] = useState(rotas[4]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [data, setData] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [topConteudos, setTopConteudos] = useState([]);
   const [gerandoImagem, setGerandoImagem] = useState({});
 
   const analise = useMemo(() => extrairAnalise(data), [data]);
@@ -299,6 +355,9 @@ export default function App() {
 
     if (rota.id === "gerar-posts") {
       setPosts([]);
+    }
+    if (rota.id === "top") {
+      setTopConteudos([]);
     }
 
     try {
@@ -318,6 +377,10 @@ export default function App() {
       if (rota.id === "gerar-posts") {
         const lista = Array.isArray(json) ? json : json.posts || [];
         setPosts(lista);
+      }
+      if (rota.id === "top") {
+        const lista = Array.isArray(json) ? json : json.topConteudos || [];
+        setTopConteudos(lista);
       }
     } catch (e) {
       setErro(e.message || "Erro ao conectar com o servidor local.");
@@ -462,7 +525,7 @@ export default function App() {
                 </div>
               )}
 
-              {posts.length > 0 && !loading && (
+              {selecionada.id === "gerar-posts" && posts.length > 0 && !loading && (
                 <div style={styles.postsGrid}>
                   {posts.map((post, index) => (
                     <PostCard
@@ -476,7 +539,15 @@ export default function App() {
                 </div>
               )}
 
-              {analise && posts.length === 0 && (
+              {selecionada.id === "top" && topConteudos.length > 0 && !loading && (
+                <div style={styles.postsGrid}>
+                  {topConteudos.map((post, index) => (
+                    <TopContentCard key={index} post={post} ranking={index + 1} />
+                  ))}
+                </div>
+              )}
+
+              {analise && selecionada.id !== "gerar-posts" && selecionada.id !== "top" && (
                 <div style={styles.analysisBox}>{formatarAnalise(analise)}</div>
               )}
             </section>
