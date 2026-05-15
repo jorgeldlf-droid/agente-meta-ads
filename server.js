@@ -124,32 +124,78 @@ function extrairImagemDoHtml(html, baseUrl) {
   return null;
 }
 
-async function buscarImagemOficial(fornecedor) {
-  const links = linksFornecedores[fornecedor] || [];
+// Validar se URL tem extensão de imagem válida para evitar quebra no frontend
+function isFormatoImagemValido(url) {
+  if (!url) return false;
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.includes('.jpg') || 
+         lowerUrl.includes('.jpeg') || 
+         lowerUrl.includes('.png') || 
+         lowerUrl.includes('.webp');
+}
 
-  for (const link of links) {
+// Cache simples em memória para evitar chamadas repetidas à API do Serper.dev
+const imageCache = new Map();
+
+async function buscarImagemOficial(fornecedor, tema = "") {
+  const apiKey = process.env.SERPER_API_KEY;
+  // Fallback seguro: se não tiver chave, retorna null
+  if (!apiKey) return null;
+
+  const dominios = dominiosOficiais[fornecedor] || [];
+  if (dominios.length === 0) return null;
+
+  const cacheKey = `${fornecedor}-${tema}`.toLowerCase();
+  if (imageCache.has(cacheKey)) {
+    return imageCache.get(cacheKey);
+  }
+
+  const querySite = dominios.map(d => `site:${d}`).join(" OR ");
+  
+  // Múltiplas buscas em cascata
+  const queries = [
+    `${querySite} ${fornecedor} ${tema}`.trim(),
+    `${querySite} ${fornecedor} porcelanato`,
+    `${querySite} ${fornecedor} revestimento`,
+    `${querySite} ${fornecedor} coleção`,
+    `${querySite} ${fornecedor} ambiente`
+  ];
+
+  for (const query of queries) {
     try {
-      const resposta = await fetch(link, {
+      const response = await fetch("https://google.serper.dev/images", {
+        method: "POST",
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-          Accept: "text/html",
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json"
         },
+        body: JSON.stringify({ q: query, num: 5 })
       });
 
-      if (!resposta.ok) continue;
+      if (!response.ok) continue;
 
-      const html = await resposta.text();
-      const imagem = extrairImagemDoHtml(html, link);
+      const data = await response.json();
+      const images = data.images || [];
 
-      if (imagem && validarDominioOficial(imagem, fornecedor)) {
-        return imagem;
+      for (const img of images) {
+        // Validação rigorosa + checagem de formato de imagem
+        if (img.imageUrl && 
+            validarDominioOficial(img.imageUrl, fornecedor) &&
+            isFormatoImagemValido(img.imageUrl)) {
+            
+          console.log(`[Serper] 🟢 Encontrou | Fornecedor: ${fornecedor} | Query: "${query}"`);
+          imageCache.set(cacheKey, img.imageUrl);
+          return img.imageUrl;
+        }
       }
-    } catch (erro) {
-      console.log(`Não consegui buscar imagem oficial de ${fornecedor}:`, erro.message);
+      console.log(`[Serper] 🔴 Não encontrou | Fornecedor: ${fornecedor} | Query: "${query}"`);
+    } catch (error) {
+      console.log(`[Serper] ❌ Erro | Fornecedor: ${fornecedor} | Query: "${query}" | Erro:`, error.message);
     }
   }
 
+  console.log(`[Serper] 🚫 Nenhuma imagem encontrada para ${fornecedor} no tema "${tema}". Cache negativo salvo.`);
+  imageCache.set(cacheKey, null); // Evita repetir a cascata para a mesma combinação que já sabemos que falha
   return null;
 }
 
@@ -352,7 +398,7 @@ ${fornecedores.join(", ")}
 
         const imagemOficial =
           fornecedor !== "Não identificado"
-            ? await buscarImagemOficial(fornecedor)
+            ? await buscarImagemOficial(fornecedor, post.tema || post.gancho)
             : null;
 
         return {
