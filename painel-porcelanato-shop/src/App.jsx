@@ -281,7 +281,8 @@ function PostCard({ post, index, onGerarImagem, gerando }) {
 }
 
 // NOVO COMPONENTE: Exibe dados da Meta
-function TopContentCard({ post, ranking }) {
+function TopContentCard({ post, ranking, onAnalisar, analisando }) {
+  const permalinkSeguro = typeof post.permalink === "string" && post.permalink.startsWith("http");
   return (
     <div style={styles.postCard}>
       <h3 style={styles.postDay}>RANKING #{ranking}</h3>
@@ -330,6 +331,45 @@ function TopContentCard({ post, ranking }) {
             </div>
           </div>
         </div>
+
+        {/* BOTOES DE AÇÃO */}
+        <div style={{ display: "flex", gap: "12px", marginTop: "22px", flexWrap: "wrap" }}>
+          {permalinkSeguro && (
+            <a 
+              href={post.permalink} 
+              target="_blank" 
+              rel="noreferrer" 
+              style={{ ...styles.copyButton, textDecoration: "none", display: "inline-block" }}
+            >
+              Abrir no Instagram
+            </a>
+          )}
+          <button 
+            onClick={onAnalisar} 
+            disabled={analisando} 
+            style={{ ...styles.generateButton, width: "auto" }}
+          >
+            {analisando ? "Analisando IA..." : "Analisar desempenho com IA"}
+          </button>
+        </div>
+
+        {/* FEEDBACK DE CARREGAMENTO */}
+        {analisando && (
+          <div style={{ marginTop: "22px", padding: "16px", background: "#f8f9fa", borderRadius: "8px", border: "1px dashed #ccc" }}>
+            <strong style={{ color: "#2d2d2d" }}>Mestre Técnico analisando o post...</strong>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#666" }}>
+              Avaliando ganchos, métricas e sucesso comercial.
+            </p>
+          </div>
+        )}
+
+        {/* RESULTADO DA ENGENHARIA REVERSA */}
+        {post.analiseIA && !analisando && (
+          <div style={{ marginTop: "22px", paddingTop: "22px", borderTop: "1px solid #e5e5e5" }}>
+            <div style={{ ...styles.cardMiniTagDark, marginBottom: "16px" }}>ENGENHARIA REVERSA IA</div>
+            {formatarAnalise(post.analiseIA)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -342,6 +382,7 @@ export default function App() {
   const [data, setData] = useState(null);
   const [posts, setPosts] = useState([]);
   const [topConteudos, setTopConteudos] = useState([]);
+  const [analisandoTop, setAnalisandoTop] = useState({});
   const [gerandoImagem, setGerandoImagem] = useState({});
 
   const analise = useMemo(() => extrairAnalise(data), [data]);
@@ -414,6 +455,34 @@ export default function App() {
       alert(e.message || "Erro ao gerar imagem IA.");
     } finally {
       setGerandoImagem((prev) => ({ ...prev, [index]: false }));
+    }
+  }
+
+  async function analisarConteudo(index, post) {
+    try {
+      setAnalisandoTop((prev) => ({ ...prev, [index]: true }));
+
+      const resposta = await fetch(`${API_BASE}/analisar-conteudo-top`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post }),
+      });
+
+      const json = await resposta.json();
+
+      if (!resposta.ok || !json.analise) {
+        throw new Error(json.erro || "Erro ao analisar conteúdo.");
+      }
+
+      setTopConteudos((prev) =>
+        prev.map((p, i) =>
+          i === index ? { ...p, analiseIA: json.analise } : p
+        )
+      );
+    } catch (e) {
+      alert(e.message || "Erro ao analisar conteúdo.");
+    } finally {
+      setAnalisandoTop((prev) => ({ ...prev, [index]: false }));
     }
   }
 
@@ -542,7 +611,13 @@ export default function App() {
               {selecionada.id === "top" && topConteudos.length > 0 && !loading && (
                 <div style={styles.postsGrid}>
                   {topConteudos.map((post, index) => (
-                    <TopContentCard key={index} post={post} ranking={index + 1} />
+                    <TopContentCard 
+                      key={index} 
+                      post={post} 
+                      ranking={index + 1} 
+                      onAnalisar={() => analisarConteudo(index, post)}
+                      analisando={!!analisandoTop[index]}
+                    />
                   ))}
                 </div>
               )}

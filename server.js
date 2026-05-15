@@ -283,8 +283,8 @@ async function topConteudosHandler(req, res) {
       return res.status(400).json({ erro: "Nenhuma conta Instagram vinculada identificada." });
     }
 
-    // 2. Buscar mídias e métricas
-    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp&limit=50&access_token=${token}`);
+    // 2. Buscar mídias e métricas (Agora incluindo 'permalink')
+    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp,permalink&limit=50&access_token=${token}`);
     const mediaData = await mediaRes.json();
     
     if (!mediaData.data) {
@@ -318,6 +318,7 @@ async function topConteudosHandler(req, res) {
       return {
         id: m.id, tipo: m.media_type, imagem: imagemSegura,
         legenda: legendaSegura,
+        permalink: m.permalink || null,
         likes, comments, shares, saves, reach, interacoes, engajamento,
         data: new Date(m.timestamp).toLocaleDateString("pt-BR")
       };
@@ -334,6 +335,42 @@ async function topConteudosHandler(req, res) {
 
 app.get("/top-conteudos", topConteudosHandler);
 app.post("/top-conteudos", topConteudosHandler);
+
+// NOVA ROTA: Analisar conteúdo real (Engenharia Reversa)
+app.post("/analisar-conteudo-top", async (req, res) => {
+  try {
+    const { post } = req.body;
+    if (!post) {
+      return res.status(400).json({ erro: "Dados do post não fornecidos." });
+    }
+
+    const legendaSegura = typeof post.legenda === "string" ? post.legenda.slice(0, 300) : "Sem legenda";
+
+    const prompt = `
+Faça a engenharia reversa do sucesso deste conteúdo real do Instagram da loja de porcelanatos.
+
+DADOS DO CONTEÚDO:
+- Tipo: ${post.tipo}
+- Legenda original: ${legendaSegura}
+- Interações totais: ${post.interacoes}
+- Engajamento: ${post.engajamento}%
+
+Retorne uma análise direta, no seguinte formato Markdown:
+- **Por que performou:** [sua análise]
+- **Padrão a repetir:** [o que manter]
+- **Próximo post sugerido:** [ideia]
+- **CTA Melhorado:** [sugestão de chamada para Whatsapp/Loja]
+- **Ideia de Reel Derivado:** [roteiro curtinho]
+- **Foco Comercial:** [como isso vende porcelanato]
+`;
+
+    const analise = await gerarTextoIA(prompt, 1200);
+    res.json({ analise });
+  } catch (error) {
+    console.error("Erro /analisar-conteudo-top:", error);
+    res.status(500).json({ erro: "Erro ao analisar conteúdo top" });
+  }
+});
 
 app.post("/instagram-insights", async (req, res) => {
   try {
