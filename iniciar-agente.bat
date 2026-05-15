@@ -1,14 +1,5 @@
 @echo off
-title Central IA Porcelanato Shop
 
-start "Backend Porcelanato Shop" cmd /k "cd /d C:\agente-meta-ads && node server.js"
+start cmd /k "cd /d C:\Users\jorge\OneDrive\Documents\GitHub\agente-meta-ads\painel-porcelanato-shop && npm run dev"
 
-timeout /t 3
-
-start "Painel Porcelanato Shop" cmd /k "cd /d C:\agente-meta-ads\painel-porcelanato-shop && npm run dev"
-
-timeout /t 5
-
-start http://localhost:5173
-
-exit
+start cmd /k "cd /d C:\Users\jorge\OneDrive\Documents\GitHub\agente-meta-ads && node server.js"

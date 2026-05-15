@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "http://localhost:3001";
 
 const rotas = [
   {
@@ -30,7 +30,7 @@ const rotas = [
   {
     id: "gerar-posts",
     titulo: "Gerar Posts",
-    subtitulo: "Posts automáticos com dúvidas + fornecedores",
+    subtitulo: "Posts automáticos com IA",
     endpoint: "/gerar-posts",
   },
   {
@@ -41,16 +41,12 @@ const rotas = [
   },
 ];
 
-function extrairAnalise(data) {
-  return data?.analise || data?.analiseIA || data?.analise_ia || data?.ideias || data?.posts || "";
-}
-
 function numero(valor) {
-  if (valor === undefined || valor === null || Number.isNaN(Number(valor))) return "0";
+  if (!valor) return "0";
   return Number(valor).toLocaleString("pt-BR");
 }
 
-function limparMarkdownBasico(texto) {
+function limparTexto(texto) {
   return String(texto || "")
     .replace(/\*\*/g, "")
     .replace(/__/g, "")
@@ -59,8 +55,49 @@ function limparMarkdownBasico(texto) {
     .trim();
 }
 
+function extrairAnalise(data) {
+  return data?.analise || data?.analiseIA || data?.analise_ia || data?.ideias || "";
+}
+
+function isImagemOficialReal(url) {
+  if (!url) return false;
+
+  const lower = String(url).toLowerCase();
+
+  if (lower.includes("unsplash.com")) return false;
+  if (lower.includes("pexels.com")) return false;
+  if (lower.includes("pixabay.com")) return false;
+
+  return (
+    lower.includes("portinari") ||
+    lower.includes("ceusa") ||
+    lower.includes("eliane") ||
+    lower.includes("elizabeth") ||
+    lower.includes("embramaco") ||
+    lower.includes("roca") ||
+    lower.includes("incepa") ||
+    lower.includes("delta")
+  );
+}
+
+function resumoMetricas(data, posts) {
+  const fonte = data?.promocaoVigente || data?.top10 || data?.midias || [];
+  const lista = Array.isArray(fonte) ? fonte : [];
+
+  const alcance = lista.reduce((acc, item) => acc + (item.reach || 0), 0);
+  const interacoes = lista.reduce((acc, item) => acc + (item.totalInteractions || 0), 0);
+  const compartilhamentos = lista.reduce((acc, item) => acc + (item.shares || 0), 0);
+
+  return {
+    total: posts?.length || lista.length || 0,
+    alcance,
+    interacoes,
+    compartilhamentos,
+  };
+}
+
 function detectarTipoLinha(linha) {
-  const texto = limparMarkdownBasico(linha);
+  const texto = limparTexto(linha);
   const lower = texto.toLowerCase();
 
   if (!texto) return "space";
@@ -72,37 +109,17 @@ function detectarTipoLinha(linha) {
   if (
     lower.includes("imagem oficial") ||
     lower.includes("imagem de fornecedor") ||
-    lower.includes("foto oficial") ||
-    lower.includes("fornecedor ideal") ||
-    lower.includes("tipo de imagem oficial")
+    lower.includes("foto oficial")
   ) {
     return "officialImage";
   }
 
   if (
     lower.includes("prompt ia") ||
-    lower.includes("prompt de imagem ia") ||
-    lower.includes("imagem criada por ia") ||
-    lower.includes("prompt para imagem") ||
+    lower.includes("prompt de imagem") ||
     lower.includes("prompt imagem ia")
   ) {
     return "aiImage";
-  }
-
-  if (
-    lower.includes("formato da imagem") ||
-    lower.includes("formato recomendado") ||
-    lower.includes("formato:")
-  ) {
-    return "format";
-  }
-
-  if (
-    lower.includes("observação comercial") ||
-    lower.includes("observacao comercial") ||
-    lower.includes("qual imagem usar")
-  ) {
-    return "note";
   }
 
   if (
@@ -120,35 +137,19 @@ function detectarTipoLinha(linha) {
   return "paragraph";
 }
 
-function LinhaAnalise({ linha, index }) {
-  const [copiado, setCopiado] = useState(false);
-
+function LinhaAnalise({ linha }) {
   const tipo = detectarTipoLinha(linha);
-  const texto = limparMarkdownBasico(linha).replaceAll("#", "").trim();
+  const texto = limparTexto(linha).replaceAll("#", "").trim();
 
-  async function copiarPrompt() {
-    try {
-      await navigator.clipboard.writeText(texto);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 1800);
-    } catch {
-      alert("Não consegui copiar automaticamente. Selecione o texto e copie manualmente.");
-    }
-  }
-
-  if (tipo === "space") return <div key={index} style={styles.analysisSpace} />;
+  if (tipo === "space") return <div style={styles.analysisSpace} />;
 
   if (tipo === "title") {
-    return (
-      <h3 key={index} style={styles.analysisTitle}>
-        {texto}
-      </h3>
-    );
+    return <h3 style={styles.analysisTitle}>{texto}</h3>;
   }
 
   if (tipo === "officialImage") {
     return (
-      <div key={index} style={styles.imageSuggestionCard}>
+      <div style={styles.imageSuggestionCard}>
         <div style={styles.cardMiniTag}>IMAGEM OFICIAL SUGERIDA</div>
         <p style={styles.imageSuggestionText}>{texto}</p>
       </div>
@@ -157,138 +158,138 @@ function LinhaAnalise({ linha, index }) {
 
   if (tipo === "aiImage") {
     return (
-      <div key={index} style={styles.aiSuggestionCard}>
-        <div style={styles.aiCardHeader}>
-          <div style={styles.cardMiniTagDark}>PROMPT PARA IMAGEM IA</div>
-
-          <button onClick={copiarPrompt} style={styles.copyButton}>
-            {copiado ? "Copiado!" : "Copiar Prompt IA"}
-          </button>
-        </div>
-
+      <div style={styles.aiSuggestionCard}>
+        <div style={styles.cardMiniTagDark}>PROMPT PARA IMAGEM IA</div>
         <p style={styles.imageSuggestionText}>{texto}</p>
       </div>
     );
   }
 
-  if (tipo === "format") {
-    return (
-      <div key={index} style={styles.formatCard}>
-        <strong>Formato recomendado:</strong> {texto}
-      </div>
-    );
-  }
-
-  if (tipo === "note") {
-    return (
-      <div key={index} style={styles.noteCard}>
-        <strong>Observação comercial:</strong> {texto}
-      </div>
-    );
-  }
-
   if (tipo === "detail") {
-    return (
-      <p key={index} style={styles.analysisBullet}>
-        {texto}
-      </p>
-    );
+    return <p style={styles.analysisBullet}>{texto}</p>;
   }
 
-  return (
-    <p key={index} style={styles.analysisParagraph}>
-      {texto}
-    </p>
-  );
+  return <p style={styles.analysisParagraph}>{texto}</p>;
 }
 
 function formatarAnalise(texto) {
   if (!texto) return null;
 
   return texto.split("\n").map((linha, index) => (
-    <LinhaAnalise key={index} linha={linha} index={index} />
+    <LinhaAnalise key={index} linha={linha} />
   ));
 }
 
-function resumoMetricas(data) {
-  const fonte = data?.promocaoVigente || data?.top10 || data?.midias || [];
-  const lista = Array.isArray(fonte) ? fonte : [];
+function PostCard({ post, index, onGerarImagem, gerando }) {
+  const [copiado, setCopiado] = useState(false);
 
-  const alcance = lista.reduce((acc, item) => acc + (item.reach || 0), 0);
-  const interacoes = lista.reduce((acc, item) => acc + (item.totalInteractions || 0), 0);
-  const compartilhamentos = lista.reduce((acc, item) => acc + (item.shares || 0), 0);
+  const prompt =
+    post.promptImagem ||
+    post.prompt_ia ||
+    post.promptIA ||
+    post.prompt ||
+    `${post.tema || ""}. ${post.gancho || ""}. ${post.legenda || ""}`;
 
-  return {
-    total: lista.length,
-    alcance,
-    interacoes,
-    compartilhamentos,
-  };
-}
+  const imagemOficialReal = isImagemOficialReal(post.imagemOficial);
 
-function textoCurto(texto, tamanho = 150) {
-  if (!texto) return "Sem legenda";
-  return texto.length > tamanho ? texto.slice(0, tamanho) + "..." : texto;
-}
-
-function ConteudoCard({ item, index }) {
-  const tipo = item.tipo || item.media_product_type || item.media_type || "Conteúdo";
+  async function copiarPrompt() {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1600);
+    } catch {
+      alert("Não consegui copiar o prompt.");
+    }
+  }
 
   return (
-    <div style={styles.contentCard}>
-      <div style={styles.contentTop}>
-        <div style={{ minWidth: 0 }}>
-          <div style={styles.rank}>#{index + 1}</div>
-          <h3 style={styles.contentTitle}>{textoCurto(item.legenda_curta || item.legenda, 130)}</h3>
-        </div>
+    <div style={styles.postCard}>
+      <h3 style={styles.postDay}>DIA {index + 1}</h3>
 
-        <div style={styles.scoreBox}>
-          <span>Score</span>
-          <strong>{numero(item.score)}</strong>
-        </div>
+      <div style={styles.postInfo}>
+        <p><strong>Tema:</strong> {post.tema || "-"}</p>
+        <p><strong>Gancho:</strong> {post.gancho || "-"}</p>
+        <p><strong>Legenda:</strong> {post.legenda || "-"}</p>
+        <p><strong>CTA:</strong> {post.cta || "-"}</p>
+        <p><strong>Fornecedor:</strong> {post.fornecedor || post.fornecedorDetectado || "Não identificado"}</p>
       </div>
 
-      <div style={styles.typeBadge}>{tipo}</div>
-
-      <div style={styles.miniGrid}>
-        <div style={styles.miniMetric}>
-          <strong>{numero(item.reach)}</strong>
-          <span>Alcance</span>
+      {imagemOficialReal ? (
+        <div style={styles.realOfficialBox}>
+          <div style={styles.cardMiniTag}>IMAGEM OFICIAL DO FORNECEDOR</div>
+          <img src={post.imagemOficial} alt="Imagem oficial" style={styles.officialImage} />
         </div>
-
-        <div style={styles.miniMetric}>
-          <strong>{numero(item.totalInteractions)}</strong>
-          <span>Interações</span>
+      ) : (
+        <div style={styles.noOfficialBox}>
+          <div style={styles.noOfficialTitle}>Imagem oficial não encontrada</div>
+          <p style={styles.noOfficialText}>
+            Não vamos mostrar imagem genérica como oficial. Use IA ou adicione futuramente uma imagem real do catálogo.
+          </p>
         </div>
-
-        <div style={styles.miniMetric}>
-          <strong>{numero(item.shares)}</strong>
-          <span>Shares</span>
-        </div>
-      </div>
-
-      {item.permalink && (
-        <a href={item.permalink} target="_blank" rel="noreferrer" style={styles.linkButton}>
-          Abrir no Instagram
-        </a>
       )}
+
+      <div style={styles.aiPostBox}>
+        <div style={styles.aiPostHeader}>
+          <div>
+            <div style={styles.cardMiniTagDark}>IMAGEM IA</div>
+            <p style={styles.aiPostText}>Gerar imagem premium baseada neste post.</p>
+          </div>
+
+          <div style={styles.buttonGroup}>
+            <button onClick={copiarPrompt} style={styles.copyButton}>
+              {copiado ? "Copiado!" : "Copiar Prompt"}
+            </button>
+
+            <button
+              onClick={() => onGerarImagem(index, prompt)}
+              style={styles.generateButton}
+              disabled={gerando}
+            >
+              {gerando ? "Gerando..." : "Gerar Imagem IA"}
+            </button>
+          </div>
+        </div>
+
+        {gerando && (
+          <div style={styles.loadingImageBox}>
+            <div style={styles.spinner}></div>
+            <strong>Gerando imagem IA...</strong>
+            <small>Aguarde alguns segundos.</small>
+          </div>
+        )}
+
+        {post.imagemIA && !gerando && (
+          <div style={styles.generatedImageBox}>
+            <img src={post.imagemIA} alt="Imagem IA gerada" style={styles.generatedImage} />
+
+            <div style={styles.imageActions}>
+              <a href={post.imagemIA} target="_blank" rel="noreferrer" style={styles.openImageButton}>
+                Abrir imagem
+              </a>
+
+              <a href={post.imagemIA} download="imagem-ia-porcelanato.png" style={styles.downloadButton}>
+                Baixar imagem
+              </a>
+            </div>
+
+            <small style={styles.imageWarning}>Imagem gerada por IA OpenAI. Revise antes de publicar.</small>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function App() {
-  const [selecionada, setSelecionada] = useState(rotas[0]);
+  const [selecionada, setSelecionada] = useState(rotas[4]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [data, setData] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [gerandoImagem, setGerandoImagem] = useState({});
 
   const analise = useMemo(() => extrairAnalise(data), [data]);
-  const metricas = useMemo(() => resumoMetricas(data), [data]);
-
-  const listaConteudos = useMemo(() => {
-    if (!data) return [];
-    return data.promocaoVigente || data.top10 || data.midias || [];
-  }, [data]);
+  const metricas = useMemo(() => resumoMetricas(data, posts), [data, posts]);
 
   async function chamarRota(rota) {
     setSelecionada(rota);
@@ -296,9 +297,13 @@ export default function App() {
     setErro("");
     setData(null);
 
+    if (rota.id === "gerar-posts") {
+      setPosts([]);
+    }
+
     try {
       const resposta = await fetch(`${API_BASE}${rota.endpoint}`, {
-        method: "POST",
+        method: rota.id === "gerar-posts" ? "GET" : "POST",
         headers: { "Content-Type": "application/json" },
       });
 
@@ -309,10 +314,43 @@ export default function App() {
       }
 
       setData(json);
+
+      if (rota.id === "gerar-posts") {
+        const lista = Array.isArray(json) ? json : json.posts || [];
+        setPosts(lista);
+      }
     } catch (e) {
       setErro(e.message || "Erro ao conectar com o servidor local.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function gerarImagemIA(index, prompt) {
+    try {
+      setGerandoImagem((prev) => ({ ...prev, [index]: true }));
+
+      const resposta = await fetch(`${API_BASE}/gerar-imagem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const json = await resposta.json();
+
+      if (!resposta.ok || !json.imageUrl) {
+        throw new Error(json.error || "Erro ao gerar imagem IA.");
+      }
+
+      setPosts((prev) =>
+        prev.map((post, i) =>
+          i === index ? { ...post, imagemIA: json.imageUrl } : post
+        )
+      );
+    } catch (e) {
+      alert(e.message || "Erro ao gerar imagem IA.");
+    } finally {
+      setGerandoImagem((prev) => ({ ...prev, [index]: false }));
     }
   }
 
@@ -403,7 +441,7 @@ export default function App() {
                 </button>
               </div>
 
-              {!data && !loading && !erro && (
+              {!data && posts.length === 0 && !loading && !erro && (
                 <div style={styles.emptyBox}>
                   <h3>Selecione um módulo para iniciar</h3>
                   <p>O painel vai buscar dados reais do agente e organizar a resposta aqui.</p>
@@ -424,25 +462,24 @@ export default function App() {
                 </div>
               )}
 
-              {analise && <div style={styles.analysisBox}>{formatarAnalise(analise)}</div>}
-            </section>
-
-            {listaConteudos.length > 0 && (
-              <section style={styles.contentsSection}>
-                <div style={styles.contentsHeader}>
-                  <div>
-                    <span style={styles.sectionTag}>DADOS COLETADOS</span>
-                    <h2 style={styles.contentsTitle}>Conteúdos analisados</h2>
-                  </div>
-                </div>
-
-                <div style={styles.contentGrid}>
-                  {listaConteudos.slice(0, 9).map((item, index) => (
-                    <ConteudoCard key={item.id || index} item={item} index={index} />
+              {posts.length > 0 && !loading && (
+                <div style={styles.postsGrid}>
+                  {posts.map((post, index) => (
+                    <PostCard
+                      key={index}
+                      post={post}
+                      index={index}
+                      onGerarImagem={gerarImagemIA}
+                      gerando={!!gerandoImagem[index]}
+                    />
                   ))}
                 </div>
-              </section>
-            )}
+              )}
+
+              {analise && posts.length === 0 && (
+                <div style={styles.analysisBox}>{formatarAnalise(analise)}</div>
+              )}
+            </section>
           </main>
         </div>
       </div>
@@ -736,6 +773,94 @@ const styles = {
     boxSizing: "border-box",
   },
 
+  postsGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 22,
+  },
+
+  postCard: {
+    background: "#ffffff",
+    border: "1px solid #e5e5e5",
+    borderRadius: 22,
+    padding: 22,
+    boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+  },
+
+  postDay: {
+    color: "#ff6b1a",
+    textAlign: "center",
+    fontSize: 24,
+    margin: "0 0 18px",
+    fontWeight: 900,
+  },
+
+  postInfo: {
+    color: "#2d2d2d",
+    fontSize: 15,
+    lineHeight: 1.55,
+  },
+
+  realOfficialBox: {
+    marginTop: 18,
+    background: "#fff7f2",
+    border: "1px solid #ffd2ba",
+    borderRadius: 18,
+    padding: 16,
+  },
+
+  officialImage: {
+    width: "100%",
+    borderRadius: 16,
+    maxHeight: 520,
+    objectFit: "cover",
+    display: "block",
+  },
+
+  noOfficialBox: {
+    marginTop: 18,
+    background: "#fff7f2",
+    border: "1px solid #ffd2ba",
+    borderLeft: "6px solid #ff6b1a",
+    borderRadius: 16,
+    padding: 16,
+  },
+
+  noOfficialTitle: {
+    color: "#ff6b1a",
+    fontWeight: 900,
+    marginBottom: 6,
+  },
+
+  noOfficialText: {
+    margin: 0,
+    color: "#555",
+    lineHeight: 1.5,
+  },
+
+  aiPostBox: {
+    marginTop: 18,
+    background: "#eeeeee",
+    border: "1px solid #d9d9d9",
+    borderLeft: "6px solid #252525",
+    borderRadius: 16,
+    padding: 16,
+  },
+
+  aiPostHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
+  aiPostText: {
+    margin: "8px 0 0",
+    color: "#555",
+    fontSize: 14,
+  },
+
   analysisSpace: {
     height: 8,
   },
@@ -788,27 +913,6 @@ const styles = {
     boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
   },
 
-  aiCardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 8,
-    flexWrap: "wrap",
-  },
-
-  copyButton: {
-    background: "#ff6b1a",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: 999,
-    padding: "8px 14px",
-    fontSize: 12,
-    fontWeight: 900,
-    cursor: "pointer",
-    boxShadow: "0 8px 18px rgba(255,107,26,0.25)",
-  },
-
   cardMiniTag: {
     display: "inline-block",
     background: "#ff6b1a",
@@ -839,138 +943,110 @@ const styles = {
     lineHeight: 1.6,
   },
 
-  formatCard: {
-    background: "#ffffff",
-    border: "1px solid #dddddd",
-    borderRadius: 14,
-    padding: "12px 14px",
-    margin: "10px 0",
-    color: "#333333",
-  },
-
-  noteCard: {
-    background: "#252525",
-    color: "#ffffff",
-    borderRadius: 14,
-    padding: "13px 15px",
-    margin: "12px 0",
-    lineHeight: 1.55,
-  },
-
-  contentsSection: {
-    background: "#6f7373",
-    borderRadius: 26,
-    padding: 24,
-    border: "1px solid rgba(255,255,255,0.13)",
-    boxShadow: "0 20px 50px rgba(0,0,0,0.16)",
-    width: "100%",
-    maxWidth: "100%",
-    boxSizing: "border-box",
-    overflow: "hidden",
-  },
-
-  contentsHeader: {
-    marginBottom: 16,
-  },
-
-  contentsTitle: {
-    margin: "5px 0 0",
-    fontSize: 26,
-    fontWeight: 900,
-    color: "#ffffff",
-  },
-
-  contentGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 14,
-    width: "100%",
-  },
-
-  contentCard: {
-    background: "#f7f7f7",
-    color: "#222222",
-    borderRadius: 20,
-    padding: 18,
-    border: "1px solid rgba(255,255,255,0.2)",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.13)",
-    minWidth: 0,
-    boxSizing: "border-box",
-  },
-
-  contentTop: {
+  buttonGroup: {
     display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    minWidth: 0,
+    gap: 8,
+    flexWrap: "wrap",
   },
 
-  rank: {
-    color: "#ff6b1a",
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: 1,
-  },
-
-  contentTitle: {
-    fontSize: 14,
-    lineHeight: 1.42,
-    margin: "6px 0 10px",
-    color: "#222222",
-    overflowWrap: "break-word",
-  },
-
-  scoreBox: {
-    background: "#252525",
-    color: "#ffffff",
-    borderRadius: 14,
-    padding: "8px 10px",
-    minWidth: 72,
-    height: "fit-content",
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    flexShrink: 0,
-  },
-
-  typeBadge: {
-    display: "inline-block",
+  copyButton: {
     background: "#ff6b1a",
     color: "#ffffff",
+    border: "none",
     borderRadius: 999,
-    padding: "5px 10px",
-    fontSize: 11,
+    padding: "8px 14px",
+    fontSize: 12,
     fontWeight: 900,
-    marginBottom: 12,
+    cursor: "pointer",
+    boxShadow: "0 8px 18px rgba(255,107,26,0.25)",
   },
 
-  miniGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 8,
-  },
-
-  miniMetric: {
-    background: "#ffffff",
-    borderRadius: 12,
-    padding: 9,
-    display: "flex",
-    flexDirection: "column",
-    textAlign: "center",
-    border: "1px solid #e5e5e5",
-    minWidth: 0,
-  },
-
-  linkButton: {
-    display: "inline-block",
-    marginTop: 12,
+  generateButton: {
     background: "#252525",
     color: "#ffffff",
-    padding: "9px 12px",
-    borderRadius: 12,
+    border: "none",
+    borderRadius: 999,
+    padding: "8px 14px",
+    fontSize: 12,
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+  },
+
+  generatedImageBox: {
+    marginTop: 16,
+    background: "#ffffff",
+    border: "1px solid #d7d7d7",
+    borderRadius: 18,
+    padding: 12,
+  },
+
+  generatedImage: {
+    width: "100%",
+    maxWidth: 520,
+    display: "block",
+    borderRadius: 16,
+    margin: "0 auto",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+  },
+
+  loadingImageBox: {
+    marginTop: 16,
+    minHeight: 180,
+    background: "#f4f4f4",
+    border: "1px dashed #cfcfcf",
+    borderRadius: 16,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column",
+    gap: 8,
+    color: "#333333",
+    textAlign: "center",
+    padding: 18,
+  },
+
+  spinner: {
+    width: 34,
+    height: 34,
+    border: "4px solid #dddddd",
+    borderTop: "4px solid #ff6b1a",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+
+  imageActions: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+
+  openImageButton: {
+    background: "#ff6b1a",
+    color: "#ffffff",
+    padding: "9px 14px",
+    borderRadius: 999,
     textDecoration: "none",
     fontSize: 13,
     fontWeight: 900,
+  },
+
+  downloadButton: {
+    background: "#252525",
+    color: "#ffffff",
+    padding: "9px 14px",
+    borderRadius: 999,
+    textDecoration: "none",
+    fontSize: 13,
+    fontWeight: 900,
+  },
+
+  imageWarning: {
+    display: "block",
+    textAlign: "center",
+    color: "#666666",
+    marginTop: 10,
   },
 };
