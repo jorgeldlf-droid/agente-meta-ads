@@ -177,13 +177,37 @@ async function buscarImagemOficial(fornecedor, tema = "") {
       const data = await response.json();
       const images = data.images || [];
 
+      const dominiosBloqueados = [
+        "unsplash", "pexels", "pixabay", "pinterest", 
+        "mercadolivre", "shopee", "freepik", "shutterstock",
+        "adobe", "magazineluiza", "leroymerlin", "madeiramadeira",
+        "instagram", "facebook", "tiktok", "youtube"
+      ];
+
       for (const img of images) {
-        // Validação rigorosa + checagem de formato de imagem
-        if (img.imageUrl && 
-            validarDominioOficial(img.imageUrl, fornecedor) &&
-            isFormatoImagemValido(img.imageUrl)) {
+        if (!img.imageUrl) continue;
+        
+        const origemLink = img.link || img.sourceUrl || "";
+        const lowerImageUrl = img.imageUrl.toLowerCase();
+        const lowerOrigem = origemLink.toLowerCase();
+        
+        // 1. Barreira Anti-Genérica/Marketplace/Rede Social
+        const isBloqueada = dominiosBloqueados.some(d => lowerImageUrl.includes(d) || lowerOrigem.includes(d));
+        if (isBloqueada) continue;
+
+        // 2. Validação Dupla (Página de Origem OU CDN da Imagem)
+        const dominioImagemValido = validarDominioOficial(img.imageUrl, fornecedor);
+        const dominioLinkValido = origemLink ? validarDominioOficial(origemLink, fornecedor) : false;
             
-          console.log(`[Serper] 🟢 Encontrou | Fornecedor: ${fornecedor} | Query: "${query}"`);
+        if ((dominioImagemValido || dominioLinkValido) && isFormatoImagemValido(img.imageUrl)) {
+          
+          const passouPor = dominioImagemValido ? "Dominio da Imagem" : "Dominio da Página Origem";
+          console.log(`[Serper] 🟢 Encontrou OFICIAL!`);
+          console.log(`   - Fornecedor: ${fornecedor}`);
+          console.log(`   - Passou por: ${passouPor}`);
+          console.log(`   - URL Imagem: ${img.imageUrl}`);
+          console.log(`   - URL Origem: ${origemLink}`);
+          
           imageCache.set(cacheKey, img.imageUrl);
           return img.imageUrl;
         }
@@ -434,45 +458,166 @@ Para cada tendência, inclua:
   }
 });
 
+// HELPER INTERNO: Busca top conteúdos para o Motor de IA sem afetar a rota oficial
+async function obterTopConteudosReaisHelper() {
+  try {
+    const token = process.env.META_ACCESS_TOKEN;
+    if (!token) return [];
+
+    const pageRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`);
+    const pageData = await pageRes.json();
+    
+    const igAccount = pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id;
+    if (!igAccount) return [];
+
+    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,caption,like_count,comments_count&limit=20&access_token=${token}`);
+    const mediaData = await mediaRes.json();
+    
+    if (!mediaData.data) return [];
+
+    const posts = mediaData.data.map(m => {
+      const interacoes = (m.like_count || 0) + (m.comments_count || 0);
+      const legenda = typeof m.caption === "string" ? m.caption.slice(0, 120) + "..." : "Sem legenda";
+      return { tipo: m.media_type, legenda, interacoes };
+    });
+
+    return posts.sort((a, b) => b.interacoes - a.interacoes).slice(0, 5);
+  } catch (e) {
+    console.error("Fallback ativado no helper de top conteudos:", e);
+    return [];
+  }
+}
+
 async function gerarPostsHandler(req, res) {
   try {
-    const prompt = `
-Crie um calendário de 7 posts para Instagram da Porcelanato Shop.
+    const topReais = await obterTopConteudosReaisHelper();
+    let contextoTop = "Nenhum dado real disponível no momento. Crie conteúdos puramente baseados em tendências.";
+    if (topReais.length > 0) {
+      contextoTop = topReais.map(p => `- Tipo: ${p.tipo} | Interações: ${p.interacoes} | Legenda (trecho): ${p.legenda}`).join("\n");
+      if (contextoTop.length > 1500) contextoTop = contextoTop.slice(0, 1500) + "...";
+    }
 
+    const perguntasConsumidor = `
+- porcelanato polido ou acetinado?
+- porcelanato escorrega?
+- qual porcelanato usar na área externa?
+- porcelanato mancha?
+- porcelanato amadeirado vale a pena?
+- porcelanato grande é melhor?
+- qual rejunte usar?
+- porcelanato para banheiro
+- porcelanato para cozinha
+- porcelanato para sala
+- como limpar porcelanato?
+- porcelanato risca?
+- porcelanato retificado
+- porcelanato brilhante ou fosco?
+- porcelanato para garagem`;
+
+    const baseSchema = `
 Retorne SOMENTE JSON válido, sem markdown.
-
-Formato obrigatório:
+Formato obrigatório para CADA POST:
 [
   {
+    "categoriaEstrategica": "",
     "tema": "",
     "gancho": "",
     "legenda": "",
     "cta": "",
     "fornecedor": "",
-    "promptImagem": ""
+    "promptImagem": "",
+    "perguntaConsumidor": "",
+    "inspiracaoTopConteudos": "",
+    "relacaoPromocaoMes": "",
+    "scoreComercial": 90,
+    "justificativaScore": "",
+    "formatoSugerido": "Reels, Feed, Story, Carrossel",
+    "potencialWhatsApp": "Alto/Médio/Baixo",
+    "potencialSalvamento": "Alto/Médio/Baixo",
+    "potencialViral": "Alto/Médio/Baixo",
+    "potencialArquitetos": "Alto/Médio/Baixo",
+    "potencialVendaImediata": "Alto/Médio/Baixo"
   }
 ]
+Regras: O scoreComercial deve ser numérico (0 a 100). O campo promptImagem deve ser excelente para gerar imagens realistas.`;
 
-Regras:
-- Um post para cada dia.
-- Sempre favorecer porcelanato.
-- Usar fornecedores reais da loja:
-${fornecedores.join(", ")}
-- Não inventar imagem oficial.
-- Não criar URL de imagem oficial.
-- O campo promptImagem deve ser muito bom para gerar imagem ultra realista de porcelanato.
-- Linguagem comercial para Instagram.
-- Foco em WhatsApp e loja física.
-`;
+    // --- CÓRTEX 1: Fornecedores (2 posts) ---
+    const promptFornecedores = `
+Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 2 posts para Instagram focados EXCLUSIVAMENTE em FORNECEDORES e PRODUTOS REAIS.
+Fornecedores permitidos: ${fornecedores.join(", ")}.
 
-    const texto = await gerarTextoIA(prompt, 2500);
-    const jsonLimpo = limparJson(texto);
+MUITO IMPORTANTE:
+- Use nomes REAIS de coleções e acabamentos (ex: "Portinari coleção limestone acetinado 120x120").
+- EVITE temas genéricos e adjetivos vazios como "luxo sofisticado moderno premium".
+- O objetivo é que o título e tema sejam precisos para busca no Google Imagens (catálogo).
 
-    let posts = JSON.parse(jsonLimpo);
+Defina categoriaEstrategica como "Fornecedor".
+${baseSchema}`;
 
-    if (!Array.isArray(posts)) {
-      posts = posts.posts || [];
+    // --- CÓRTEX 2: Dúvidas do Consumidor (2 posts) ---
+    const promptDuvidas = `
+Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 2 posts educativos para Instagram baseados nestas DÚVIDAS DO CONSUMIDOR:
+${perguntasConsumidor}
+Foco: Responder a dúvida, conteúdo educativo, gerar salvamentos e alcance orgânico.
+Defina categoriaEstrategica como "Dúvida do Consumidor".
+${baseSchema}`;
+
+    // --- CÓRTEX 3: Derivados Campeões e Promoção (3 posts) ---
+    const promptDerivados = `
+Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 3 posts para Instagram focados em replicar os padrões dos conteúdos que MAIS FIZERAM SUCESSO.
+DADOS DOS TOP CONTEÚDOS REAIS:
+${contextoTop}
+Alinhe também com a campanha atual: "Exterminador do Prejuízo" (humor, urgência, oferta). Não copie os posts, extraia e derive a estratégia vencedora.
+Defina categoriaEstrategica como "Derivado Campeão".
+${baseSchema}`;
+
+    // Executa as 3 estratégias em paralelo (Isolamento de Alucinação)
+    const [resFornecedores, resDuvidas, resDerivados] = await Promise.all([
+      gerarTextoIA(promptFornecedores, 1200).catch(() => "[]"),
+      gerarTextoIA(promptDuvidas, 1200).catch(() => "[]"),
+      gerarTextoIA(promptDerivados, 1500).catch(() => "[]")
+    ]);
+
+    const parseSeguro = (txt) => {
+      try {
+        if (txt.length > 15000) return [];
+        const limpo = limparJson(txt);
+        const obj = JSON.parse(limpo);
+        return Array.isArray(obj) ? obj : (obj.posts || []);
+      } catch {
+        return [];
+      }
     }
+
+    let posts = [
+      ...parseSeguro(resFornecedores),
+      ...parseSeguro(resDuvidas),
+      ...parseSeguro(resDerivados)
+    ];
+
+    // Fallback absoluto: Garantir 7 posts
+    while (posts.length < 7) {
+      const fallbackDerivados = parseSeguro(resDerivados);
+      if (fallbackDerivados.length > 0) {
+        posts.push({
+           ...fallbackDerivados[posts.length % fallbackDerivados.length],
+           tema: fallbackDerivados[posts.length % fallbackDerivados.length].tema + " (Bônus Campeão)"
+        });
+      } else {
+        posts.push({
+          categoriaEstrategica: "Derivado Campeão",
+          tema: "Destaque Porcelanato Premium",
+          gancho: "Aproveite a campanha Exterminador do Prejuízo",
+          legenda: "Renove seu ambiente com nossas coleções premium. Chame no WhatsApp!",
+          cta: "Visite a Porcelanato Shop",
+          fornecedor: "Portinari",
+          promptImagem: "Porcelanato premium em ambiente moderno, alta resolução",
+          scoreComercial: 85
+        });
+      }
+    }
+    
+    posts = posts.slice(0, 7);
 
     const postsTratados = await Promise.all(
       posts.slice(0, 7).map(async (post) => {
@@ -481,12 +626,24 @@ ${fornecedores.join(", ")}
           detectarFornecedor(JSON.stringify(post)) ||
           "Não identificado";
 
-        const imagemOficial =
-          fornecedor !== "Não identificado"
-            ? await buscarImagemOficial(fornecedor, post.tema || post.gancho)
-            : null;
+        let imagemOficial = null;
+        if (fornecedor !== "Não identificado") {
+          const temaBusca = post.tema || post.gancho || "";
+          console.log(`[Gerar Posts] 🔍 Tentativa primária por tema: ${fornecedor} + "${temaBusca}"`);
+          imagemOficial = await buscarImagemOficial(fornecedor, temaBusca);
+          
+          if (!imagemOficial) {
+            console.log(`[Gerar Posts] 🔄 Fallback acionado: buscando apenas pelo catálogo do fornecedor (${fornecedor})`);
+            imagemOficial = await buscarImagemOficial(fornecedor, "");
+          }
+        }
+
+        const scoreSeguro = typeof post.scoreComercial === "number"
+          ? Math.max(0, Math.min(100, post.scoreComercial))
+          : null;
 
         return {
+          // CAMPOS OBRIGATÓRIOS DO FRONTEND ATUAL (NUNCA REMOVER)
           tema: post.tema || "",
           gancho: post.gancho || "",
           legenda: post.legenda || "",
@@ -500,6 +657,20 @@ ${fornecedores.join(", ")}
           imagemOficial,
           imagemOficialStatus: imagemOficial ? "encontrada" : "nao_encontrada",
           linksFornecedor: linksFornecedores[fornecedor] || [],
+          
+          // NOVOS CAMPOS INTELIGENTES (OPCIONAIS NO FRONTEND ATUAL)
+          categoriaEstrategica: post.categoriaEstrategica || null,
+          perguntaConsumidor: post.perguntaConsumidor || null,
+          inspiracaoTopConteudos: post.inspiracaoTopConteudos || null,
+          relacaoPromocaoMes: post.relacaoPromocaoMes || null,
+          scoreComercial: scoreSeguro,
+          justificativaScore: post.justificativaScore || null,
+          formatoSugerido: post.formatoSugerido || null,
+          potencialWhatsApp: post.potencialWhatsApp || null,
+          potencialSalvamento: post.potencialSalvamento || null,
+          potencialViral: post.potencialViral || null,
+          potencialArquitetos: post.potencialArquitetos || null,
+          potencialVendaImediata: post.potencialVendaImediata || null
         };
       })
     );
