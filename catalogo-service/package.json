@@ -1,0 +1,17 @@
+{
+  "name": "catalogo-service",
+  "version": "1.0.0",
+  "description": "Modulo importador de catalogos oficiais com extracao de ambientes via IA Vision",
+  "main": "src/importadorPortinari.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/importadorPortinari.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.53",
+    "@supabase/supabase-js": "^2.43.4",
+    "dotenv": "^16.4.5",
+    "openai": "^4.52.0",
+    "pdfjs-dist": "^4.2.82"
+  }
+}

@@ -2,8 +2,13 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import path from "path";
 
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), 'catalogo-service/.env') });
+
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://odxqvkfmmndvsjvzzijm.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 const app = express();
 const PORT = 3001;
@@ -488,8 +493,78 @@ async function obterTopConteudosReaisHelper() {
   }
 }
 
+async function obterProdutosValidadosBanco() {
+  if (!SUPABASE_KEY || !SUPABASE_URL) {
+    console.warn("⚠️ SUPABASE_URL ou SUPABASE_KEY não configurado em .env. Pulando injeção de contexto.");
+    return { textoContexto: "", ambientesDb: [] };
+  }
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 segundos de timeout seguro
+
+    // 1. Buscar todos os fornecedores cadastrados
+    const resF = await fetch(`${SUPABASE_URL}/rest/v1/fornecedores?select=id,nome`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      },
+      signal: controller.signal
+    });
+    
+    if (!resF.ok) {
+      clearTimeout(timeoutId);
+      return { textoContexto: "", ambientesDb: [] };
+    }
+    const fornecedoresDb = await resF.json();
+
+    // 2. Buscar imagens de catálogo tipo 'ambiente' (nossos recortes validados)
+    const resI = await fetch(`${SUPABASE_URL}/rest/v1/imagens_catalogo?select=*&tipo=eq.ambiente`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      },
+      signal: controller.signal
+    });
+    
+    if (!resI.ok) {
+      clearTimeout(timeoutId);
+      return { textoContexto: "", ambientesDb: [] };
+    }
+    const ambientesDb = await resI.json();
+    clearTimeout(timeoutId);
+
+    // Organizar contexto por fornecedor
+    let textoContexto = "=== CONTEXTO DE PRODUTOS/AMBIENTES VALIDADOS NO BANCO ===\n";
+    
+    for (const f of fornecedoresDb) {
+      textoContexto += `\nFornecedor: ${f.nome}\n`;
+      
+      // Filtra dinamicamente os ambientes que pertencem a este fornecedor
+      const ambientesF = ambientesDb.filter(amb => 
+        amb.url_imagem && 
+        amb.url_imagem.toLowerCase().includes(`/${f.nome.toLowerCase()}/`)
+      );
+      
+      if (ambientesF.length === 0) {
+        textoContexto += `* (NENHUM produto ou catálogo validado no banco de dados ainda. IMPORTANTE: Para este fornecedor, você está PROIBIDO de criar posts comerciais com nomes de modelos, acabamento ou medidas fictícias. Crie APENAS posts de inspiração genérica, sem citar especificações técnicas!)\n`;
+      } else {
+        textoContexto += `* Ambientes Oficiais/Validados Disponíveis (Você deve criar posts comerciais baseados nestes ambientes reais):\n`;
+        for (const amb of ambientesF) {
+          textoContexto += `  - Descrição/Nome real do ambiente: "${amb.descricao}" | Página: ${amb.pagina} | URL da Imagem Oficial: ${amb.url_imagem}\n`;
+        }
+      }
+    }
+
+    return { textoContexto, ambientesDb };
+  } catch (error) {
+    console.warn("⚠️ Fallback ativado: erro de conexão com o Supabase. Montando contexto vazio. Detalhes:", error.message);
+    return { textoContexto: "", ambientesDb: [] };
+  }
+}
+
 async function gerarPostsHandler(req, res) {
   try {
+    const { textoContexto: contextoBanco, ambientesDb } = await obterProdutosValidadosBanco();
     const topReais = await obterTopConteudosReaisHelper();
     let contextoTop = "Nenhum dado real disponível no momento. Crie conteúdos puramente baseados em tendências.";
     if (topReais.length > 0) {
@@ -543,13 +618,20 @@ Regras: O scoreComercial deve ser numérico (0 a 100). O campo promptImagem deve
 
     // --- CÓRTEX 1: Fornecedores (2 posts) ---
     const promptFornecedores = `
-Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 2 posts para Instagram focados EXCLUSIVAMENTE em FORNECEDORES e PRODUTOS REAIS.
+Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 2 posts para Instagram focados em FORNECEDORES e PRODUTOS.
 Fornecedores permitidos: ${fornecedores.join(", ")}.
 
-MUITO IMPORTANTE:
-- Use nomes REAIS de coleções e acabamentos (ex: "Portinari coleção limestone acetinado 120x120").
-- EVITE temas genéricos e adjetivos vazios como "luxo sofisticado moderno premium".
-- O objetivo é que o título e tema sejam precisos para busca no Google Imagens (catálogo).
+${contextoBanco}
+
+MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
+1. Para fornecedores que possuem "Ambientes Oficiais/Validados" listados no contexto acima (como Portinari): 
+   - Crie posts comerciais focados EXCLUSIVAMENTE em um desses ambientes reais do banco.
+   - Use exatamente o nome/descrição real fornecido no contexto.
+   - Coloque no campo "promptImagem" a exata "URL da Imagem Oficial" fornecida para o ambiente correspondente. Isso garantirá consistência perfeita!
+2. Para fornecedores que NÃO possuem produtos ou ambientes validados no contexto (como Ceusa, Eliane, etc.):
+   - Você está terminantemente PROIBIDO de citar qualquer nome de modelo técnico, coleção fictícia, formato (medida) ou acabamento (como "Urban Acetinado", "60x120").
+   - Crie posts de INSPIRAÇÃO GENÉRICA e de tendências de design de interiores associadas a essa marca (ex: "A elegância dos porcelanatos Ceusa", "Como paginar ambientes com Ceusa").
+   - Nesses posts genéricos, deixe o campo "promptImagem" em branco ou descreva um prompt abstrato e marque a "imagemOficial" como null.
 
 Defina categoriaEstrategica como "Fornecedor".
 ${baseSchema}`;
@@ -626,15 +708,97 @@ ${baseSchema}`;
           detectarFornecedor(JSON.stringify(post)) ||
           "Não identificado";
 
+        // Trava de validação e consistência defensiva
         let imagemOficial = null;
-        if (fornecedor !== "Não identificado") {
-          const temaBusca = post.tema || post.gancho || "";
-          console.log(`[Gerar Posts] 🔍 Tentativa primária por tema: ${fornecedor} + "${temaBusca}"`);
-          imagemOficial = await buscarImagemOficial(fornecedor, temaBusca);
+        let imagemOficialStatus = "nao_encontrada";
+        let aviso = null;
+        let legendaSegura = post.legenda || "";
+
+        // 1. Extrair fornecedores individuais (tratando múltiplos fornecedores)
+        const nomesFornecedores = fornecedor.split(',')
+          .map(s => s.trim().toLowerCase())
+          .filter(s => s && s !== "não identificado");
+
+        // 2. Verificar se algum dos fornecedores tem catálogo no banco
+        const fornecedoresComCatalogo = nomesFornecedores.filter(nome => 
+          (ambientesDb || []).some(amb => amb.url_imagem && amb.url_imagem.toLowerCase().includes(`/${nome}/`))
+        );
+        const temCatalogoBanco = fornecedoresComCatalogo.length > 0;
+
+        const temImagemBanco = typeof post.promptImagem === "string" && post.promptImagem.startsWith("http");
+
+        if (temImagemBanco) {
+          // Se a IA gerou uma URL diretamente
+          imagemOficial = post.promptImagem;
+          imagemOficialStatus = "validada_catalogo";
+          console.log(`[Gerar Posts] 🟢 Imagem Validada pelo Catálogo do Banco (Supabase) para ${fornecedor}: ${imagemOficial}`);
           
-          if (!imagemOficial) {
-            console.log(`[Gerar Posts] 🔄 Fallback acionado: buscando apenas pelo catálogo do fornecedor (${fornecedor})`);
-            imagemOficial = await buscarImagemOficial(fornecedor, "");
+          if (!temCatalogoBanco) {
+            // Trava anti-alucinação se não tem catálogo
+            console.log(`[Gerar Posts] 🛡️ Trava Anti-Alucinação Ativada para Fornecedor sem catálogo: ${fornecedor}`);
+            aviso = "Produto não validado no catálogo oficial";
+            imagemOficialStatus = "produto_nao_validado";
+
+            legendaSegura = legendaSegura
+              .replace(/\b\d{2,3}x\d{2,3}\b/gi, "")
+              .replace(/\b(acetinado|polido|retificado|mate|brilhante|lapado|natural)\b/gi, "")
+              .trim();
+
+            if (!legendaSegura || legendaSegura.includes("coleção") || legendaSegura.includes("Coleção") || legendaSegura.toLowerCase().includes("urban")) {
+              legendaSegura = `Inspire-se com a elegância e sofisticação que os porcelanatos da ${fornecedor} trazem para o seu ambiente. Perfeito para quem busca alta durabilidade e acabamento impecável em cada detalhe de seu lar!`;
+            }
+
+            if (fornecedor !== "Não identificado") {
+              console.log(`[Gerar Posts] 🔍 Buscando imagem de inspiração genérica no Serper para ${fornecedor}`);
+              imagemOficial = await buscarImagemOficial(fornecedor, "porcelanato revestimento");
+              imagemOficialStatus = imagemOficial ? "fallback_generico" : "produto_nao_validado";
+            }
+          }
+        } else {
+          // Se a IA gerou um prompt textual (não URL)
+          if (temCatalogoBanco) {
+            // O fornecedor TEM catálogo, vamos pegar um ambiente real do banco!
+            const ambientesF = (ambientesDb || []).filter(amb => 
+              amb.url_imagem && 
+              fornecedoresComCatalogo.some(nome => amb.url_imagem.toLowerCase().includes(`/${nome}/`))
+            );
+
+            if (ambientesF.length > 0) {
+              const temaBusca = (post.tema || "").toLowerCase();
+              const correspondente = ambientesF.find(amb => 
+                amb.descricao && temaBusca.includes(amb.descricao.toLowerCase())
+              );
+              
+              const ambEscolhido = correspondente || ambientesF[Math.floor(Math.random() * ambientesF.length)];
+              imagemOficial = ambEscolhido.url_imagem;
+              imagemOficialStatus = "validada_catalogo";
+              console.log(`[Gerar Posts] 🟢 Imagem do Banco recuperada como fallback dinâmico para ${fornecedor}: ${imagemOficial}`);
+            } else {
+              // Fallback se não encontrar
+              const temaBusca = post.tema || post.gancho || "";
+              imagemOficial = await buscarImagemOficial(fornecedor, temaBusca);
+              imagemOficialStatus = imagemOficial ? "fallback_generico" : "nao_encontrada";
+            }
+          } else {
+            // Não tem catálogo no banco, ativamos trava anti-alucinação
+            console.log(`[Gerar Posts] 🛡️ Trava Anti-Alucinação Ativada para Fornecedor sem catálogo (sem imagem URL): ${fornecedor}`);
+            aviso = "Produto não validado no catálogo oficial";
+            imagemOficialStatus = "produto_nao_validado";
+
+            legendaSegura = legendaSegura
+              .replace(/\b\d{2,3}x\d{2,3}\b/gi, "")
+              .replace(/\b(acetinado|polido|retificado|mate|brilhante|lapado|natural)\b/gi, "")
+              .trim();
+
+            if (!legendaSegura || legendaSegura.includes("coleção") || legendaSegura.includes("Coleção") || legendaSegura.toLowerCase().includes("urban")) {
+              legendaSegura = `Inspire-se com a elegância e sofisticação que os porcelanatos da ${fornecedor} trazem para o seu ambiente. Perfeito para quem busca alta durabilidade e acabamento impecável em cada detalhe de seu lar!`;
+            }
+
+            if (fornecedor !== "Não identificado") {
+              const temaBusca = post.tema || post.gancho || "";
+              imagemOficial = await buscarImagemOficial(fornecedor, temaBusca);
+              imagemOficialStatus = imagemOficial ? "fallback_generico" : "produto_nao_validado";
+            }
           }
         }
 
@@ -642,21 +806,91 @@ ${baseSchema}`;
           ? Math.max(0, Math.min(100, post.scoreComercial))
           : null;
 
+        // --- NOVA TRAVA: ALINHAMENTO DE FORNECEDOR ÚNICO PARA IMAGENS OFICIAIS ---
+        let fornecedorFinal = fornecedor;
+        let temaFinal = post.tema || "";
+        let ganchoFinal = post.gancho || "";
+        let legendaFinal = legendaSegura;
+
+        if (imagemOficialStatus === "validada_catalogo" && typeof imagemOficial === "string" && imagemOficial.startsWith("http")) {
+          const marcasConhecidas = ["Portinari", "Ceusa", "Eliane", "Elizabeth", "Embramaco", "Roca", "Incepa", "Delta", "Delta Nova"];
+          const donoImagem = marcasConhecidas.find(marca => imagemOficial.toLowerCase().includes(`/${marca.toLowerCase()}/`));
+
+          if (donoImagem) {
+            const outrosFornecedores = marcasConhecidas.filter(m => m.toLowerCase() !== donoImagem.toLowerCase());
+            
+            const citaOutrosLegenda = outrosFornecedores.some(m => legendaFinal.toLowerCase().includes(m.toLowerCase()));
+            const citaOutrosTema = outrosFornecedores.some(m => temaFinal.toLowerCase().includes(m.toLowerCase()));
+            const citaOutrosGancho = outrosFornecedores.some(m => ganchoFinal.toLowerCase().includes(m.toLowerCase()));
+
+            if (citaOutrosLegenda || citaOutrosTema || citaOutrosGancho) {
+              console.log(`[Gerar Posts] ⚠️ Conflito de Fornecedor: Imagem é de ${donoImagem}, mas o post cita outros.`);
+              
+              const marcasOrdenadas = [...marcasConhecidas].sort((a, b) => b.length - a.length);
+              const marcaRegexStr = marcasOrdenadas.map(m => m.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+
+              // Regex para sequências de pelo menos 2 marcas separadas por vírgula, mais, barra, "e", "ou" ou espaços
+              const seqRegex = new RegExp(`\\b(${marcaRegexStr})\\b(?:(?:\\s*(?:,|\\+|e|ou|\\/)\\s*|\\s+(?=\\b(${marcaRegexStr})\\b))\\b(${marcaRegexStr})\\b)+`, 'gi');
+              const singleRegex = new RegExp(`\\b(${marcaRegexStr})\\b`, 'gi');
+
+              const substituirPorDono = (texto) => {
+                if (!texto) return texto;
+                // 1. Substituir sequências primeiro
+                let t = texto.replace(seqRegex, donoImagem);
+                // 2. Substituir marcas individuais remanescentes (que não sejam a do próprio dono)
+                t = t.replace(singleRegex, (match) => {
+                  if (match.toLowerCase() === donoImagem.toLowerCase()) {
+                    return match;
+                  }
+                  return donoImagem;
+                });
+                return t;
+              };
+
+              let legendaTest = substituirPorDono(legendaFinal);
+              let temaTest = substituirPorDono(temaFinal);
+              let ganchoTest = substituirPorDono(ganchoFinal);
+
+              const aindaCitaOutros = outrosFornecedores.some(m => 
+                legendaTest.toLowerCase().includes(m.toLowerCase()) ||
+                temaTest.toLowerCase().includes(m.toLowerCase()) ||
+                ganchoTest.toLowerCase().includes(m.toLowerCase())
+              );
+
+              if (!aindaCitaOutros) {
+                console.log(`[Gerar Posts] 🟢 Higienização realizada com sucesso para o fornecedor único ${donoImagem}!`);
+                legendaFinal = legendaTest;
+                temaFinal = temaTest;
+                ganchoFinal = ganchoTest;
+                fornecedorFinal = donoImagem;
+              } else {
+                console.log(`[Gerar Posts] 🛡️ Fallback de Segurança: Não foi possível higienizar marcas com total precisão. Removendo imagem oficial de ${donoImagem}.`);
+                imagemOficial = null;
+                imagemOficialStatus = "fallback_generico";
+                aviso = "Imagem oficial removida por conflito de fornecedor";
+              }
+            } else {
+              fornecedorFinal = donoImagem;
+            }
+          }
+        }
+
+        const linksFornecedorFinal = linksFornecedores[fornecedorFinal] || [];
+
         return {
           // CAMPOS OBRIGATÓRIOS DO FRONTEND ATUAL (NUNCA REMOVER)
-          tema: post.tema || "",
-          gancho: post.gancho || "",
-          legenda: post.legenda || "",
+          tema: temaFinal || "",
+          gancho: ganchoFinal || "",
+          legenda: legendaFinal,
           cta: post.cta || "Chame no WhatsApp ou visite nossa loja física.",
-          fornecedor,
-          promptImagem:
-            post.promptImagem ||
-            post.prompt_ia ||
-            post.promptIA ||
-            `${post.tema || ""}. ${post.gancho || ""}. Ambiente moderno com porcelanato premium.`,
+          fornecedor: fornecedorFinal,
+          promptImagem: typeof post.promptImagem === "string" && post.promptImagem.startsWith("http")
+            ? `Ambiente decorado oficial: ${temaFinal || ""}`
+            : (post.promptImagem || `${temaFinal || ""}. Ambiente moderno com porcelanato premium.`),
           imagemOficial,
-          imagemOficialStatus: imagemOficial ? "encontrada" : "nao_encontrada",
-          linksFornecedor: linksFornecedores[fornecedor] || [],
+          imagemOficialStatus,
+          aviso,
+          linksFornecedor: linksFornecedorFinal,
           
           // NOVOS CAMPOS INTELIGENTES (OPCIONAIS NO FRONTEND ATUAL)
           categoriaEstrategica: post.categoriaEstrategica || null,
