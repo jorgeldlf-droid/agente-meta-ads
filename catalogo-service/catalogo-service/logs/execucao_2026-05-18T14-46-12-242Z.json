@@ -1,0 +1,16 @@
+{
+  "horario": "2026-05-18T14:46:12.242Z",
+  "pdf_utilizado": "LANCAMENTOS 2025 2.pdf",
+  "paginas_processadas": [],
+  "quantidade_de_recortes": 0,
+  "limites_teste": {
+    "max_pdf": 1,
+    "max_paginas": 3,
+    "max_recortes": 10
+  },
+  "falhas": [
+    "Erro ao buscar fornecedor: column fornecedores.slug does not exist",
+    "OCORREU UM ERRO FATAL DURANTE A EXECUÇÃO: column fornecedores.slug does not exist"
+  ],
+  "confianca_dos_recortes": []
+}

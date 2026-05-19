@@ -1,0 +1,54 @@
+{
+  "horario": "2026-05-18T15:04:45.903Z",
+  "pdf_utilizado": "LANCAMENTOS 2025 2.pdf",
+  "paginas_processadas": [
+    {
+      "numero": 1,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/portinari/paginas/lancamentos_2025_2_pagina_1.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 2,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/portinari/paginas/lancamentos_2025_2_pagina_2.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 3,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/portinari/paginas/lancamentos_2025_2_pagina_3.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    }
+  ],
+  "quantidade_de_recortes": 1,
+  "limites_teste": {
+    "max_pdf": 1,
+    "max_paginas": 3,
+    "max_recortes": 10
+  },
+  "falhas": [],
+  "confianca_dos_recortes": [
+    {
+      "pagina": 1,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 2,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 3,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com móveis e revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    }
+  ]
+}

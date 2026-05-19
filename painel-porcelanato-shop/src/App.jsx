@@ -375,6 +375,152 @@ function TopContentCard({ post, ranking, onAnalisar, analisando }) {
   );
 }
 
+function PromocaoPostCard({ post, index }) {
+  const permalinkSeguro = typeof post.permalink === "string" && post.permalink.startsWith("http");
+  
+  let badgeColor = "#ff6b1a";
+  let badgeText = null;
+
+  if (post.analiseFlag === "video_principal") {
+    badgeText = "🎬 VÍDEO PRINCIPAL DA CAMPANHA";
+    badgeColor = "#e84393";
+  } else if (post.analiseFlag === "top_carousel") {
+    badgeText = "📚 TOP CARROSSEL";
+    badgeColor = "#0984e3";
+  } else if (post.analiseFlag === "top_reel") {
+    badgeText = "⚡ TOP REEL";
+    badgeColor = "#6c5ce7";
+  } else if (post.analiseFlag === "maior_alcance") {
+    badgeText = "🎯 MAIOR ALCANCE";
+    badgeColor = "#00b894";
+  } else if (post.analiseFlag === "maior_engajamento") {
+    badgeText = "🔥 MAIOR ENGAJAMENTO";
+    badgeColor = "#fdcb6e";
+  } else if (post.analiseFlag === "maior_retencao") {
+    badgeText = "⏱️ MAIOR RETENÇÃO";
+    badgeColor = "#fd79a8";
+  } else if (post.analiseFlag === "pior_desempenho") {
+    badgeText = "⚠️ PIOR DESEMPENHO (PAUSAR)";
+    badgeColor = "#d63031";
+  }
+
+  return (
+    <div style={{ ...styles.postCard, border: badgeText ? `2px solid ${badgeColor}` : "1px solid rgba(255,255,255,0.13)" }}>
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+        {badgeText && (
+          <div style={{ 
+            background: badgeColor, 
+            color: "#ffffff", 
+            padding: "6px 12px", 
+            borderRadius: "8px", 
+            fontSize: "12px", 
+            fontWeight: 900, 
+            display: "inline-block"
+          }}>
+            {badgeText}
+          </div>
+        )}
+
+        {post.recomendacaoImpulsionamento && (
+          <div style={{ 
+            background: "#00b894", 
+            color: "#ffffff", 
+            padding: "6px 12px", 
+            borderRadius: "8px", 
+            fontSize: "12px", 
+            fontWeight: 900, 
+            display: "inline-block"
+          }}>
+            🚀 RECOMENDADO PARA TRÁFEGO
+          </div>
+        )}
+      </div>
+
+      <div style={styles.postInfo}>
+        <p><strong>Formato:</strong> {post.tipo || "POST"}</p>
+        
+        {/* Caixa de legenda com limitação de altura para evitar cards gigantes */}
+        <div style={{ 
+          maxHeight: "80px", 
+          overflowY: "auto", 
+          fontSize: "13px", 
+          color: "#2d2d2d", 
+          lineHeight: 1.45,
+          paddingRight: "6px",
+          background: "rgba(0,0,0,0.05)",
+          padding: "8px",
+          borderRadius: "8px",
+          marginTop: "8px",
+          border: "1px solid rgba(0,0,0,0.08)"
+        }}>
+          <strong>Legenda:</strong> {post.legenda || "-"}
+        </div>
+      </div>
+
+      <div style={styles.realOfficialBox}>
+        <div style={styles.cardMiniTag}>MÍDIA ANALISADA</div>
+        {post.imagem ? (
+          <img src={post.imagem} alt="Thumbnail" style={styles.officialImage} />
+        ) : (
+          <p style={styles.noOfficialText}>Imagem indisponível</p>
+        )}
+      </div>
+
+      <div style={styles.aiPostBox}>
+        <div style={styles.aiPostHeader}>
+          <div style={{ width: "100%" }}>
+            <div style={styles.cardMiniTagDark}>MÉTRICAS</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "12px", color: "#2d2d2d", fontSize: "13px" }}>
+              <div><strong>👍 Likes:</strong> {post.likes}</div>
+              <div><strong>💬 Coments:</strong> {post.comments}</div>
+              <div><strong>↗️ Shares:</strong> {post.shares}</div>
+              <div><strong>💾 Saves:</strong> {post.saves}</div>
+              <div><strong>👀 Alcance:</strong> {post.reach}</div>
+              <div><strong>📈 Engajamento:</strong> {post.engajamento}%</div>
+              <div><strong>🏆 Score Final:</strong> {post.score}</div>
+            </div>
+            
+            {post.estimado && (
+              <div style={{ 
+                marginTop: "10px", 
+                background: "#ffeaa7", 
+                color: "#d63031", 
+                padding: "4px 8px", 
+                borderRadius: "6px", 
+                fontSize: "11px", 
+                fontWeight: 700,
+                display: "inline-block"
+              }}>
+                ⚠️ Métricas estimadas (Limite de API / Organic Insights)
+              </div>
+            )}
+          </div>
+        </div>
+
+        {post.observacaoIA && (
+          <div style={{ marginTop: "16px", padding: "12px", background: "rgba(255,107,26,0.06)", borderRadius: "8px", borderLeft: "4px solid #ff6b1a" }}>
+            <span style={{ fontSize: "11px", fontWeight: 900, color: "#ff6b1a", display: "block", marginBottom: "4px", textTransform: "uppercase" }}>
+              💡 Observação Estratégica IA
+            </span>
+            <p style={{ margin: 0, fontSize: "13px", color: "#2d2d2d", lineHeight: 1.4 }}>{post.observacaoIA}</p>
+          </div>
+        )}
+
+        {permalinkSeguro && (
+          <a 
+            href={post.permalink} 
+            target="_blank" 
+            rel="noreferrer" 
+            style={{ ...styles.copyButton, textDecoration: "none", display: "inline-block", marginTop: "14px", width: "auto" }}
+          >
+            Ver Post Original
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [selecionada, setSelecionada] = useState(rotas[4]);
   const [loading, setLoading] = useState(false);
@@ -382,6 +528,7 @@ export default function App() {
   const [data, setData] = useState(null);
   const [posts, setPosts] = useState([]);
   const [topConteudos, setTopConteudos] = useState([]);
+  const [promocaoVigentePosts, setPromocaoVigentePosts] = useState([]);
   const [analisandoTop, setAnalisandoTop] = useState({});
   const [gerandoImagem, setGerandoImagem] = useState({});
 
@@ -400,16 +547,19 @@ export default function App() {
     if (rota.id === "top") {
       setTopConteudos([]);
     }
+    if (rota.id === "promocao") {
+      setPromocaoVigentePosts([]);
+    }
 
     try {
-      const resposta = await fetch(`${API_BASE}${rota.endpoint}`, {
+      const response = await fetch(`${API_BASE}${rota.endpoint}`, {
         method: rota.id === "gerar-posts" ? "GET" : "POST",
         headers: { "Content-Type": "application/json" },
       });
 
-      const json = await resposta.json();
+      const json = await response.json();
 
-      if (!resposta.ok) {
+      if (!response.ok) {
         throw new Error(JSON.stringify(json, null, 2));
       }
 
@@ -422,6 +572,10 @@ export default function App() {
       if (rota.id === "top") {
         const lista = Array.isArray(json) ? json : json.topConteudos || [];
         setTopConteudos(lista);
+      }
+      if (rota.id === "promocao") {
+        const lista = Array.isArray(json) ? json : json.promocaoVigente || [];
+        setPromocaoVigentePosts(lista);
       }
     } catch (e) {
       setErro(e.message || "Erro ao conectar com o servidor local.");
@@ -617,6 +771,18 @@ export default function App() {
                       ranking={index + 1} 
                       onAnalisar={() => analisarConteudo(index, post)}
                       analisando={!!analisandoTop[index]}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {selecionada.id === "promocao" && promocaoVigentePosts.length > 0 && !loading && (
+                <div style={{ ...styles.postsGrid, marginBottom: "30px" }}>
+                  {[...promocaoVigentePosts].sort((a, b) => (b.score || 0) - (a.score || 0)).map((post, index) => (
+                    <PromocaoPostCard
+                      key={post.id || index}
+                      post={post}
+                      index={index}
                     />
                   ))}
                 </div>

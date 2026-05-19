@@ -1,0 +1,627 @@
+{
+  "horario": "2026-05-18T18:15:28.132Z",
+  "fornecedor": "Ceusa",
+  "pdf_utilizado": "catalogo-2020-web_20.pdf",
+  "paginas_processadas": [
+    {
+      "numero": 1,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_1.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 2,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_2.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 3,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_3.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 4,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_4.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 5,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_5.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 6,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_6.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 7,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_7.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 8,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_8.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 9,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_9.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 10,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_10.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 11,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_11.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 12,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_12.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 13,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_13.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 14,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_14.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 15,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_15.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 16,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_16.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 17,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_17.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 18,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_18.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 19,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_19.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 20,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_20.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 21,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_21.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 22,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_22.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 23,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_23.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 24,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_24.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 25,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_25.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 26,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_26.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 27,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_27.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 28,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_28.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 29,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_29.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 30,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_30.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 31,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_31.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 2,
+      "status": "sucesso"
+    },
+    {
+      "numero": 32,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_32.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 33,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_33.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 34,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_34.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 35,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_35.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 36,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_36.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 37,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_37.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 38,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_38.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 39,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_39.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 40,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_40.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 41,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_41.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 42,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_42.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 43,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_43.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 44,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_44.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 45,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_45.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 46,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_46.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 47,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/paginas/catalogo_2020_web_20_pagina_47.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    }
+  ],
+  "quantidade_de_recortes": 33,
+  "limites_teste": {
+    "max_pdf": 1,
+    "max_paginas": 50,
+    "max_recortes": 100
+  },
+  "falhas": [],
+  "confianca_dos_recortes": [
+    {
+      "pagina": 1,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 2,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 3,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 4,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 5,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 6,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com móveis e revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 7,
+      "confianca": "alta",
+      "motivo": "Identificado ambiente decorado com móveis e revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 8,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 9,
+      "confianca": "alta",
+      "motivo": "Imagem clara de um ambiente decorado com móveis e revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 10,
+      "confianca": "alta",
+      "motivo": "Identificado um ambiente decorado (banheiro) com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 11,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 12,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 13,
+      "confianca": "alta",
+      "motivo": "Identificado um ambiente decorado com móveis e revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 14,
+      "confianca": "alta",
+      "motivo": "Identificado um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 15,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 16,
+      "confianca": "alta",
+      "motivo": "Identificado um ambiente decorado com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 17,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimento.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 18,
+      "confianca": "alta",
+      "motivo": "Imagem clara de um ambiente decorado com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 19,
+      "confianca": "alta",
+      "motivo": "Identificado ambiente decorado com móveis e revestimento visível.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 20,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 21,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 22,
+      "confianca": "alta",
+      "motivo": "Imagem clara de um ambiente decorado, especificamente uma cozinha.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 23,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com móveis e revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 24,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 25,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado (banheiro) com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 26,
+      "confianca": "alta",
+      "motivo": "Página contém uma imagem de ambiente decorado com revestimento.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 27,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 28,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 29,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 30,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 31,
+      "confianca": "alta",
+      "motivo": "Identificação clara de ambientes decorados",
+      "ambientes_encontrados": 2
+    },
+    {
+      "pagina": 32,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 33,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 34,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 35,
+      "confianca": "alta",
+      "motivo": "Identificado ambiente decorado com sofá e parede revestida.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 36,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado (quarto) com revestimento visível.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 37,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado (banheiro) com revestimento.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 38,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado (cozinha) com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 39,
+      "confianca": "alta",
+      "motivo": "Identificado um ambiente decorado com elementos claros e distintos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 40,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimentos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 41,
+      "confianca": "alta",
+      "motivo": "Identificado um ambiente decorado com revestimento.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 42,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 43,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 44,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 45,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 200000, Requested 1145. Please try again in 343ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 46,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 47,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    }
+  ]
+}

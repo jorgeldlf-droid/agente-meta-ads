@@ -1,0 +1,666 @@
+{
+  "horario": "2026-05-18T18:26:09.256Z",
+  "fornecedor": "Eliane",
+  "pdf_utilizado": "catalogo-geral-eliane-2026-v6-web.pdf",
+  "paginas_processadas": [
+    {
+      "numero": 1,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_1.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 2,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_2.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 3,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_3.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 4,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_4.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 5,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_5.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 6,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_6.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 7,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_7.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 8,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_8.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 9,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_9.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 10,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_10.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 11,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_11.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 12,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_12.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 13,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_13.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 14,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_14.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 15,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_15.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 16,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_16.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 17,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_17.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 18,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_18.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 19,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_19.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 20,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_20.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 21,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_21.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 22,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_22.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 23,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_23.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 24,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_24.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 25,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_25.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 26,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_26.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 27,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_27.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 28,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_28.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 29,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_29.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 30,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_30.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 31,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_31.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 32,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_32.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 33,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_33.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 34,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_34.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 35,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_35.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 36,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_36.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 37,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_37.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 38,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_38.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 39,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_39.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 40,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_40.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 41,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_41.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 42,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_42.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 43,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_43.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 44,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_44.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 45,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_45.png",
+      "confianca_recorte": "alta",
+      "ambientes_detectados": 1,
+      "status": "sucesso"
+    },
+    {
+      "numero": 46,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_46.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 47,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_47.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 48,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_48.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 49,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_49.png",
+      "confianca_recorte": "alta (sem ambientes)",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    },
+    {
+      "numero": 50,
+      "url_pagina_original": "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/eliane/paginas/catalogo_geral_eliane_2026_v6_web_pagina_50.png",
+      "confianca_recorte": "baixa",
+      "ambientes_detectados": 0,
+      "status": "sucesso"
+    }
+  ],
+  "quantidade_de_recortes": 10,
+  "limites_teste": {
+    "max_pdf": 1,
+    "max_paginas": 50,
+    "max_recortes": 100
+  },
+  "falhas": [],
+  "confianca_dos_recortes": [
+    {
+      "pagina": 1,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 2,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 3,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 4,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 5,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 6,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 7,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 8,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 9,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 10,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 11,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com piscina e mobiliário",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 12,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 13,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com piso e paredes revestidos.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 14,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 15,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 16,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado claramente visível.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 17,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 18,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 19,
+      "confianca": "alta",
+      "motivo": "Página contém uma imagem clara de um ambiente decorado.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 20,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 21,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 22,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com móveis e revestimentos visíveis.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 23,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 24,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 25,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 26,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 27,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 28,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 29,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 200000, Requested 1145. Please try again in 343ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 30,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 31,
+      "confianca": "baixa",
+      "motivo": "A imagem apresenta uma mesa e uma cadeira, mas não é claro se é um ambiente decorado ou apenas uma amostra de textura.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 32,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimento",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 33,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 34,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 200000, Requested 1145. Please try again in 343ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 35,
+      "confianca": "alta",
+      "motivo": "Identificação clara de um ambiente decorado com revestimento.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 36,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 37,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 200000, Requested 1145. Please try again in 343ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 38,
+      "confianca": "alta",
+      "motivo": "Página contém uma imagem clara de um ambiente decorado.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 39,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 199584, Requested 1145. Please try again in 218ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 40,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 41,
+      "confianca": "baixa",
+      "motivo": "A imagem apresenta um ambiente que parece ser um aeroporto, mas não é um ambiente decorado típico como banheiro ou sala. A identificação de ambientes reais é confusa.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 42,
+      "confianca": "alta",
+      "motivo": "Imagem clara de um ambiente decorado com móveis e janelas",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 43,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 44,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 45,
+      "confianca": "alta",
+      "motivo": "Imagem apresenta um ambiente decorado com móveis e revestimento visível.",
+      "ambientes_encontrados": 1
+    },
+    {
+      "pagina": 46,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 47,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 200000, Requested 1145. Please try again in 343ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 48,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 49,
+      "confianca": "alta",
+      "motivo": "Página técnica, capa ou sem imagens de ambientes",
+      "ambientes_encontrados": 0
+    },
+    {
+      "pagina": 50,
+      "confianca": "baixa",
+      "motivo": "Falha na execucao: 429 Rate limit reached for gpt-4o-mini in organization org-PWZIh5RBFLvafA9cr2MOGZVV on tokens per min (TPM): Limit 200000, Used 200000, Requested 1145. Please try again in 343ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "ambientes_encontrados": 0
+    }
+  ]
+}
