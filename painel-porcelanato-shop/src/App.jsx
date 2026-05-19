@@ -518,6 +518,9 @@ function PromocaoPostCard({ post, index }) {
         )}
       </div>
     </div>
+  );
+}
+
 function InsightsPostCard({ post, index }) {
   const [hovered, setHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
