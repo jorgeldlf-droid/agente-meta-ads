@@ -1044,6 +1044,30 @@ export default function App() {
                       border: "1px solid rgba(255, 107, 26, 0.3)", color: "#ffffff"
                     }}>
                       
+                      {/* Metadados de Análise e Campanha */}
+                      <div style={{ 
+                        display: "flex", 
+                        flexWrap: "wrap", 
+                        gap: "12px", 
+                        alignItems: "center", 
+                        justifyContent: "space-between", 
+                        paddingBottom: "16px", 
+                        borderBottom: "1px solid rgba(255,255,255,0.1)",
+                        marginBottom: "4px"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", flexWrap: "wrap" }}>
+                          <span style={{ background: "rgba(255,107,26,0.15)", color: "#ff8a3d", padding: "4px 10px", borderRadius: "6px", fontWeight: "bold" }}>
+                            📅 Período: {data.resumo.periodo}
+                          </span>
+                          <span style={{ background: "rgba(9,132,227,0.15)", color: "#74b9ff", padding: "4px 10px", borderRadius: "6px", fontWeight: "bold" }}>
+                            🔍 Critério: {data.resumo.criterioAnalise || "Posts do mês atual"}
+                          </span>
+                        </div>
+                        <span style={{ background: "linear-gradient(135deg, #2d3436 0%, #1e272e 100%)", border: "1px solid rgba(255,255,255,0.15)", color: "#ffffff", padding: "6px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>
+                          📢 Campanha: {data.resumo.campanhaVigente || "Campanha vigente do mês atual"}
+                        </span>
+                      </div>
+                      
                       {/* Grid Principal de Telemetria */}
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                         <div>

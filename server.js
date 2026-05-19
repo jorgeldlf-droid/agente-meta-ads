@@ -747,33 +747,68 @@ app.post("/instagram-insights", async (req, res) => {
       console.log("[Meta API] META_ACCESS_TOKEN ausente. Pulando busca de dados reais.");
     }
 
-    // 2. Filtrar posts do mês vigente (últimos 45 dias)
-    let postsCampanha = [];
-    const dataFiltro = new Date();
-    dataFiltro.setDate(dataFiltro.getDate() - 45);
+    // 2. Calcular o primeiro e o último dia do mês atual para a análise
     const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const primeiroDia = new Date(ano, mes, 1, 0, 0, 0, 0);
+    const ultimoDia = new Date(ano, mes + 1, 0, 23, 59, 59, 999);
+    
     const formatarData = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    const periodoStr = `${formatarData(dataFiltro)} a ${formatarData(hoje)}`;
+    const periodoStr = `${formatarData(primeiroDia)} a ${formatarData(ultimoDia)}`;
+
+    let postsCampanha = [];
 
     if (rawPosts.length > 0) {
-      console.log(`[Insights] Filtrando ${rawPosts.length} posts por data limite (${formatarData(dataFiltro)})...`);
-      postsCampanha = rawPosts.filter(p => new Date(p.timestamp) >= dataFiltro);
+      console.log(`[Insights] Filtrando ${rawPosts.length} posts do mês atual (${periodoStr})...`);
       
-      const keywords = [
-        "promoção", "promocao", "desconto", "oferta", "porcelanato", 
-        "reforma", "obra", "exterminador", "prejuízo", "prejuizo", 
-        "mad shop", "estrada da reforma", "black", "ceusa", "portinari", "eliane"
+      // Filtrar posts do mês atual
+      postsCampanha = rawPosts.filter(p => {
+        const pDate = new Date(p.timestamp);
+        return pDate >= primeiroDia && pDate <= ultimoDia;
+      });
+
+      // Fallback de emergência caso não existam posts no mês atual
+      if (postsCampanha.length === 0) {
+        console.log("[Insights] Nenhum post real no mês atual. Aplicando fallback de emergência dos últimos 45 dias...");
+        const dataFiltroFallback = new Date();
+        dataFiltroFallback.setDate(dataFiltroFallback.getDate() - 45);
+        postsCampanha = rawPosts.filter(p => new Date(p.timestamp) >= dataFiltroFallback);
+      }
+
+      // Excluir campanhas encerradas
+      const campanhasEncerradas = [
+        "conexão revestir",
+        "conexao revestir",
+        "exterminador do prejuízo",
+        "exterminador do prejuizo"
       ];
-      console.log("[Insights] Filtrando posts correspondentes à campanha pelas palavras-chave...");
-      const filtrados = postsCampanha.filter(p => 
-        keywords.some(kw => (p.legenda || "").toLowerCase().includes(kw))
-      );
+      postsCampanha = postsCampanha.filter(p => {
+        const legendaLower = (p.legenda || "").toLowerCase();
+        return !campanhasEncerradas.some(c => legendaLower.includes(c));
+      });
+
+      // Identificar a campanha vigente por palavras-chave
+      const keywordsCampanha = [
+        "mad shop",
+        "estrada da reforma",
+        "reforma",
+        "porcelanato",
+        "promoção",
+        "desconto",
+        "oferta"
+      ];
       
-      if (filtrados.length > 0) {
-        postsCampanha = filtrados;
-        console.log(`[Insights] ${postsCampanha.length} posts reais selecionados após filtros.`);
+      const postsComPalavrasChave = postsCampanha.filter(p => {
+        const legendaLower = (p.legenda || "").toLowerCase();
+        return keywordsCampanha.some(kw => legendaLower.includes(kw));
+      });
+
+      if (postsComPalavrasChave.length > 0) {
+        console.log(`[Insights] Encontrados ${postsComPalavrasChave.length} posts da campanha vigente no mês atual. Analisando apenas estes.`);
+        postsCampanha = postsComPalavrasChave;
       } else {
-        console.log("[Insights] Nenhum post real correspondeu às palavras-chave. Mantendo posts dos últimos 45 dias.");
+        console.log("[Insights] Nenhum post específico da campanha vigente encontrado. Analisando todos os posts do mês atual (exceto campanhas encerradas).");
       }
     }
 
@@ -944,6 +979,8 @@ Lembre-se de retornar APENAS o JSON válido para que possamos parsear diretament
       resumo: {
         totalPostsAnalisados: postsCampanha.length,
         periodo: periodoStr,
+        criterioAnalise: "Posts do mês atual",
+        campanhaVigente: "Campanha vigente do mês atual",
         melhorPost: analiseJson.melhorPost || "Não identificado",
         melhorFormato: analiseJson.melhorFormato || "Reels",
         recomendacaoPrincipal: analiseJson.recomendacaoPrincipal || "Aproveitar o engajamento orgânico para conversão."
