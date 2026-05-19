@@ -81,11 +81,11 @@ function isImagemOficialReal(url) {
 }
 
 function resumoMetricas(data, posts) {
-  const fonte = data?.promocaoVigente || data?.top10 || data?.midias || [];
+  const fonte = data?.promocaoVigente || data?.top10 || data?.midias || data?.postsInsights || [];
   const lista = Array.isArray(fonte) ? fonte : [];
 
   const alcance = lista.reduce((acc, item) => acc + (item.reach || 0), 0);
-  const interacoes = lista.reduce((acc, item) => acc + (item.totalInteractions || 0), 0);
+  const interacoes = lista.reduce((acc, item) => acc + (item.interacoes || item.totalInteractions || 0), 0);
   const compartilhamentos = lista.reduce((acc, item) => acc + (item.shares || 0), 0);
 
   return {
@@ -518,6 +518,190 @@ function PromocaoPostCard({ post, index }) {
         )}
       </div>
     </div>
+function InsightsPostCard({ post, index }) {
+  const [hovered, setHovered] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  
+  const permalinkSeguro = typeof post.permalink === "string" && post.permalink.startsWith("http");
+  
+  let badgeColor = "#ff6b1a";
+  let badgeText = null;
+
+  if (post.analiseFlag === "video_principal") {
+    badgeText = "🎬 VÍDEO PRINCIPAL";
+    badgeColor = "#e84393";
+  } else if (post.analiseFlag === "top_carousel") {
+    badgeText = "📚 TOP CARROSSEL";
+    badgeColor = "#0984e3";
+  } else if (post.analiseFlag === "top_reel") {
+    badgeText = "⚡ TOP REEL";
+    badgeColor = "#6c5ce7";
+  } else if (post.analiseFlag === "maior_alcance") {
+    badgeText = "🎯 MAIOR ALCANCE";
+    badgeColor = "#00b894";
+  } else if (post.analiseFlag === "maior_engajamento") {
+    badgeText = "🔥 MAIOR ENGAJAMENTO";
+    badgeColor = "#fdcb6e";
+  } else if (post.analiseFlag === "maior_retencao") {
+    badgeText = "⏱️ MAIOR RETENÇÃO";
+    badgeColor = "#fd79a8";
+  } else if (post.analiseFlag === "pior_desempenho") {
+    badgeText = "⚠️ PAUSAR RECOMENDADO";
+    badgeColor = "#d63031";
+  }
+
+  const isRecomendado = post.recomendacaoImpulsionamento;
+
+  return (
+    <div 
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ 
+        ...styles.postCard, 
+        border: isRecomendado 
+          ? "3px solid #ff6b1a" 
+          : index === 0 
+            ? "3px solid #d4af37" 
+            : badgeText 
+              ? `2px dashed ${badgeColor}` 
+              : "1px solid rgba(0,0,0,0.08)",
+        boxShadow: hovered
+          ? (isRecomendado 
+              ? "0 20px 40px rgba(255, 107, 26, 0.3)" 
+              : index === 0
+                ? "0 20px 40px rgba(212, 175, 55, 0.3)"
+                : "0 20px 40px rgba(0,0,0,0.12)")
+          : (isRecomendado 
+              ? "0 10px 30px rgba(255, 107, 26, 0.18)" 
+              : "0 10px 24px rgba(0,0,0,0.04)"),
+        transform: hovered ? "translateY(-6px) scale(1.015)" : "translateY(0) scale(1)",
+        position: "relative",
+        background: isRecomendado ? "#fffcf9" : "#ffffff",
+        transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
+      }}
+    >
+      {index === 0 && (
+        <div style={{
+          position: "absolute", top: "-14px", left: "20px",
+          background: "linear-gradient(135deg, #d4af37 0%, #f3e5ab 50%, #aa771c 100%)",
+          color: "#000000", padding: "6px 16px", borderRadius: "20px", fontSize: "11px", fontWeight: 900,
+          boxShadow: "0 4px 10px rgba(212, 175, 55, 0.4)", zIndex: 2, border: "1px solid #ffffff"
+        }}>
+          <span>🏆 TOP #1 - MELHOR PERFORMANCE</span>
+        </div>
+      )}
+
+      {isRecomendado && (
+        <div style={{
+          position: "absolute", top: "-14px", right: "20px",
+          background: "linear-gradient(135deg, #ff6b1a 0%, #ff8a3d 100%)",
+          color: "#ffffff", padding: "6px 16px", borderRadius: "20px", fontSize: "11px", fontWeight: 900,
+          boxShadow: "0 4px 10px rgba(255, 107, 26, 0.4)", zIndex: 2
+        }}>
+          <span>🚀 IDEAL PARA TRÁFEGO PAGO</span>
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          {badgeText && (
+            <div style={{ background: badgeColor, color: "#ffffff", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: 900 }}>
+              {badgeText}
+            </div>
+          )}
+          <div style={{ background: "#252525", color: "#ffffff", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase" }}>
+            🎯 {post.objetivoProvavel || "conversao"}
+          </div>
+        </div>
+        <span style={{ fontSize: "24px", fontWeight: "900", color: index === 0 ? "#d4af37" : "#cccccc" }}>
+          #{index + 1}
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ background: "#fff7f2", border: "1px solid #ffd2ba", borderRadius: "14px", padding: "8px", textAlign: "center" }}>
+            {(post.imagem && !imgError) ? (
+              <img 
+                src={post.imagem} 
+                alt="Mídia" 
+                loading="lazy"
+                onError={() => setImgError(true)}
+                style={{ width: "100%", borderRadius: "10px", maxHeight: "150px", objectFit: "cover" }} 
+              />
+            ) : (
+              <div style={{
+                height: "150px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #737777 0%, #6f7373 100%)",
+                borderRadius: "10px",
+                color: "rgba(255,255,255,0.7)",
+                fontSize: "11px",
+                textAlign: "center",
+                border: "1px dashed rgba(255,255,255,0.25)",
+                padding: "10px"
+              }}>
+                <span style={{ fontSize: "24px", marginBottom: "4px" }}>🖼️</span>
+                <strong>Preview do Post</strong>
+                <small style={{ fontSize: "9px", opacity: 0.8 }}>Indisponível offline</small>
+              </div>
+            )}
+          </div>
+          {permalinkSeguro && (
+            <a href={post.permalink} target="_blank" rel="noreferrer" style={{ ...styles.copyButton, textDecoration: "none", display: "block", textAlign: "center", fontSize: "11px", padding: "6px 10px" }}>
+              Ver no Instagram
+            </a>
+          )}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div>
+            <strong style={{ fontSize: "12px", color: "#666" }}>Legenda:</strong>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#333", maxHeight: "70px", overflowY: "auto", background: "rgba(0,0,0,0.03)", padding: "6px", borderRadius: "6px" }}>
+              {post.legenda}
+            </p>
+          </div>
+
+          <div>
+            <strong style={{ fontSize: "12px", color: "#666" }}>Métricas:</strong>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", marginTop: "4px" }}>
+              <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
+                <span>Likes: <strong>{post.likes}</strong></span>
+              </div>
+              <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
+                <span>Comments: <strong>{post.comments}</strong></span>
+              </div>
+              <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
+                <span>Shares: <strong>{post.shares}</strong></span>
+              </div>
+              <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
+                <span>Saves: <strong>{post.saves}</strong></span>
+              </div>
+              <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
+                <span>Reach: <strong>{post.reach}</strong></span>
+              </div>
+              <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
+                <span>Engaj: <strong>{post.engajamento}%</strong></span>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "12px" }}>
+              <div>Score: <strong style={{ color: "#ff6b1a" }}>{post.score}</strong></div>
+              {post.estimado && <span style={{ background: "#ffeaa7", color: "#d63031", padding: "1px 4px", borderRadius: "4px", fontSize: "9px" }}>Estimadas</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {post.observacaoIA && (
+        <div style={{ marginTop: "10px", padding: "8px 12px", background: "rgba(255,107,26,0.06)", borderRadius: "8px", borderLeft: "4px solid #ff6b1a", fontSize: "12px" }}>
+          <strong style={{ color: "#ff6b1a", display: "block", fontSize: "10px", marginBottom: "2px" }}>OBSERVAÇÃO ESTRATÉGICA IA:</strong>
+          <p style={{ margin: 0, color: "#2d2d2d", lineHeight: 1.4 }}>{post.observacaoIA}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -529,11 +713,62 @@ export default function App() {
   const [posts, setPosts] = useState([]);
   const [topConteudos, setTopConteudos] = useState([]);
   const [promocaoVigentePosts, setPromocaoVigentePosts] = useState([]);
+  const [insightsPosts, setInsightsPosts] = useState([]);
   const [analisandoTop, setAnalisandoTop] = useState({});
   const [gerandoImagem, setGerandoImagem] = useState({});
 
   const analise = useMemo(() => extrairAnalise(data), [data]);
   const metricas = useMemo(() => resumoMetricas(data, posts), [data, posts]);
+
+  const resumoMetradasAvancado = useMemo(() => {
+    if (!insightsPosts || insightsPosts.length === 0) return null;
+    const totalSaves = insightsPosts.reduce((acc, p) => acc + (p.saves || 0), 0);
+    const totalShares = insightsPosts.reduce((acc, p) => acc + (p.shares || 0), 0);
+    const totalReach = insightsPosts.reduce((acc, p) => acc + (p.reach || 0), 0);
+    const totalInteracoes = insightsPosts.reduce((acc, p) => acc + (p.interacoes || 0), 0);
+    const mediaEngajamento = totalReach > 0 ? ((totalInteracoes / totalReach) * 100).toFixed(2) : "0.00";
+    
+    const postsOrdenadosSaves = [...insightsPosts].sort((a, b) => (b.saves || 0) - (a.saves || 0));
+    const postMaisSalvo = postsOrdenadosSaves[0];
+    
+    const postsOrdenadosShares = [...insightsPosts].sort((a, b) => (b.shares || 0) - (a.shares || 0));
+    const postMaisCompartilhado = postsOrdenadosShares[0];
+
+    const limparParaResumo = (txt) => {
+      if (!txt) return "-";
+      return txt.length > 50 ? txt.slice(0, 50) + "..." : txt;
+    };
+
+    return {
+      mediaEngajamento,
+      totalSaves,
+      totalShares,
+      postMaisSalvo: postMaisSalvo ? limparParaResumo(postMaisSalvo.legenda) : "-",
+      maxSavesCount: postMaisSalvo ? postMaisSalvo.saves : 0,
+      postMaisCompartilhado: postMaisCompartilhado ? limparParaResumo(postMaisCompartilhado.legenda) : "-",
+      maxSharesCount: postMaisCompartilhado ? postMaisCompartilhado.shares : 0
+    };
+  }, [insightsPosts]);
+
+  const comparativoFormatos = useMemo(() => {
+    if (!insightsPosts || insightsPosts.length === 0) return [];
+    const formatos = {
+      VIDEO: { nome: "Reels", count: 0, scoreTotal: 0 },
+      CAROUSEL_ALBUM: { nome: "Carrossel", count: 0, scoreTotal: 0 },
+      IMAGE: { nome: "Imagem Única", count: 0, scoreTotal: 0 }
+    };
+    insightsPosts.forEach(p => {
+      const tipo = p.tipo === "VIDEO" ? "VIDEO" : p.tipo === "CAROUSEL_ALBUM" ? "CAROUSEL_ALBUM" : "IMAGE";
+      if (formatos[tipo]) {
+        formatos[tipo].count++;
+        formatos[tipo].scoreTotal += (p.score || 0);
+      }
+    });
+    return Object.values(formatos).filter(f => f.count > 0).map(f => ({
+      ...f,
+      mediaScore: Math.round(f.scoreTotal / f.count)
+    }));
+  }, [insightsPosts]);
 
   async function chamarRota(rota) {
     setSelecionada(rota);
@@ -549,6 +784,9 @@ export default function App() {
     }
     if (rota.id === "promocao") {
       setPromocaoVigentePosts([]);
+    }
+    if (rota.id === "insights") {
+      setInsightsPosts([]);
     }
 
     try {
@@ -576,6 +814,10 @@ export default function App() {
       if (rota.id === "promocao") {
         const lista = Array.isArray(json) ? json : json.promocaoVigente || [];
         setPromocaoVigentePosts(lista);
+      }
+      if (rota.id === "insights") {
+        const lista = Array.isArray(json) ? json : json.postsInsights || [];
+        setInsightsPosts(lista);
       }
     } catch (e) {
       setErro(e.message || "Erro ao conectar com o servidor local.");
@@ -788,7 +1030,106 @@ export default function App() {
                 </div>
               )}
 
-              {analise && selecionada.id !== "gerar-posts" && selecionada.id !== "top" && (
+              {selecionada.id === "insights" && insightsPosts.length > 0 && !loading && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  
+                  {/* Bloco de Resumo Superior */}
+                  {data?.resumo && (
+                    <div style={{
+                      display: "flex", flexDirection: "column", gap: "20px",
+                      background: "#2a2d2d", padding: "24px", borderRadius: "18px",
+                      border: "1px solid rgba(255, 107, 26, 0.3)", color: "#ffffff"
+                    }}>
+                      
+                      {/* Grid Principal de Telemetria */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+                        <div>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Total Analisado</span>
+                          <h4 style={{ margin: "4px 0", fontSize: "20px", fontWeight: "900" }}>{data.resumo.totalPostsAnalisados} posts</h4>
+                          <small style={{ color: "rgba(255,255,255,0.6)" }}>{data.resumo.periodo}</small>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Média de Engajamento</span>
+                          <h4 style={{ margin: "4px 0", fontSize: "20px", fontWeight: "900" }}>{resumoMetradasAvancado?.mediaEngajamento}%</h4>
+                          <small style={{ color: "rgba(255,255,255,0.6)" }}>Engajamento geral</small>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Total Compartilhamentos / Saves</span>
+                          <h4 style={{ margin: "4px 0", fontSize: "20px", fontWeight: "900" }}>{resumoMetradasAvancado?.totalShares} / {resumoMetradasAvancado?.totalSaves}</h4>
+                          <small style={{ color: "rgba(255,255,255,0.6)" }}>Interações orgânicas</small>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Melhor Formato</span>
+                          <h4 style={{ margin: "4px 0", fontSize: "20px", fontWeight: "900" }}>{data.resumo.melhorFormato}</h4>
+                          <small style={{ color: "rgba(255,255,255,0.6)" }}>Maior score ponderado</small>
+                        </div>
+                      </div>
+
+                      <hr style={{ borderColor: "rgba(255,255,255,0.1)", margin: "0" }} />
+
+                      {/* Grid Secundária de Destaques e Comparativo de Formatos */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px" }}>
+                        <div>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Top Destaques Individuais</span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", marginTop: "6px" }}>
+                            <div>
+                              <strong style={{ color: "#d4af37" }}>🏆 Melhor Post:</strong> {data.resumo.melhorPost}
+                            </div>
+                            <div>
+                              <strong style={{ color: "#fd79a8" }}>💾 Mais Salvo:</strong> {resumoMetradasAvancado?.postMaisSalvo} ({resumoMetradasAvancado?.maxSavesCount} saves)
+                            </div>
+                            <div>
+                              <strong style={{ color: "#0984e3" }}>↗️ Mais Compartilhado:</strong> {resumoMetradasAvancado?.postMaisCompartilhado} ({resumoMetradasAvancado?.maxSharesCount} shares)
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Comparativo de Formatos</span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", marginTop: "6px" }}>
+                            {comparativoFormatos?.map(f => (
+                              <div key={f.nome} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.05)", padding: "6px 12px", borderRadius: "8px" }}>
+                                <span>{f.nome} ({f.count} posts)</span>
+                                <strong>Score Médio: <span style={{ color: "#ff6b1a" }}>{f.mediaScore}</span></strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <hr style={{ borderColor: "rgba(255,255,255,0.1)", margin: "0" }} />
+
+                      <div>
+                        <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Recomendação Principal</span>
+                        <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "rgba(255,255,255,0.9)", lineHeight: "1.45", fontWeight: "500" }}>
+                          {data.resumo.recomendacaoPrincipal}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bloco de Análise Estratégica Markdown */}
+                  {analise && (
+                    <div style={styles.analysisBox}>
+                      <div style={{ ...styles.cardMiniTagDark, marginBottom: "16px" }}>ANÁLISE ESTRATÉGICA IA</div>
+                      {formatarAnalise(analise)}
+                    </div>
+                  )}
+
+                  {/* Grid de Cards da Campanha */}
+                  <div>
+                    <h3 style={{ fontSize: "20px", fontWeight: "900", color: "#1f1f1f", marginBottom: "16px" }}>Detalhamento por Post</h3>
+                    <div style={styles.postsGrid}>
+                      {[...insightsPosts].sort((a, b) => (b.score || 0) - (a.score || 0)).map((post, index) => (
+                        <InsightsPostCard key={post.id || index} post={post} index={index} />
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {analise && selecionada.id !== "gerar-posts" && selecionada.id !== "top" && selecionada.id !== "insights" && (
                 <div style={styles.analysisBox}>{formatarAnalise(analise)}</div>
               )}
             </section>
