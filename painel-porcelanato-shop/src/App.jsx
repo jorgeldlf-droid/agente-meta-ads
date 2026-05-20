@@ -800,8 +800,8 @@ export default function App() {
 
       const json = await response.json();
 
-      if (!response.ok) {
-        throw new Error(JSON.stringify(json, null, 2));
+      if (!response.ok || json.success === false) {
+        throw new Error(json.erro || json.error || JSON.stringify(json, null, 2));
       }
 
       setData(json);
@@ -1066,6 +1066,22 @@ export default function App() {
                         <span style={{ background: "linear-gradient(135deg, #2d3436 0%, #1e272e 100%)", border: "1px solid rgba(255,255,255,0.15)", color: "#ffffff", padding: "6px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>
                           📢 Campanha: {data.resumo.campanhaVigente || "Campanha vigente do mês atual"}
                         </span>
+                      </div>
+                      
+                      {/* Aviso de Origem de Dados Reais da Meta API */}
+                      <div style={{
+                        background: "rgba(0,184,148,0.08)",
+                        border: "1px solid rgba(0,184,148,0.2)",
+                        color: "#00b894",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}>
+                        <span>✅</span> Análise baseada somente em posts publicados no Instagram via Meta API (Módulo independente)
                       </div>
                       
                       {/* Grid Principal de Telemetria */}

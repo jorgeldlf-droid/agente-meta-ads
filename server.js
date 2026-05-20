@@ -763,100 +763,68 @@ app.post("/instagram-insights", async (req, res) => {
       console.log(`[Insights] Filtrando ${rawPosts.length} posts do mês atual (${periodoStr})...`);
       
       // Filtrar posts do mês atual
-      postsCampanha = rawPosts.filter(p => {
+      let postsPeriodo = rawPosts.filter(p => {
         const pDate = new Date(p.timestamp);
         return pDate >= primeiroDia && pDate <= ultimoDia;
       });
 
-      // Fallback de emergência caso não existam posts no mês atual
-      if (postsCampanha.length === 0) {
-        console.log("[Insights] Nenhum post real no mês atual. Aplicando fallback de emergência dos últimos 45 dias...");
+      // Fallback de contingência extrema: se Meta API está offline/retornou 0 no mês atual, usar últimos 45 dias
+      if (postsPeriodo.length === 0) {
+        console.log("[Insights] Nenhum post real no mês atual. Aplicando contingência extrema dos últimos 45 dias...");
         const dataFiltroFallback = new Date();
         dataFiltroFallback.setDate(dataFiltroFallback.getDate() - 45);
-        postsCampanha = rawPosts.filter(p => new Date(p.timestamp) >= dataFiltroFallback);
+        postsPeriodo = rawPosts.filter(p => new Date(p.timestamp) >= dataFiltroFallback);
       }
 
-      // Excluir campanhas encerradas
-      const campanhasEncerradas = [
-        "conexão revestir",
-        "conexao revestir",
-        "exterminador do prejuízo",
-        "exterminador do prejuizo"
-      ];
-      postsCampanha = postsCampanha.filter(p => {
-        const legendaLower = (p.legenda || "").toLowerCase();
-        return !campanhasEncerradas.some(c => legendaLower.includes(c));
-      });
-
-      // Identificar a campanha vigente por palavras-chave
-      const keywordsCampanha = [
-        "mad shop",
-        "estrada da reforma",
-        "reforma",
-        "porcelanato",
-        "promoção",
-        "desconto",
-        "oferta"
+      // EXCLUSÃO OBRIGATÓRIA: Excluir qualquer post derivado de gerar posts, mock, supabase, catalogo, etc.
+      const excluirPalavras = [
+        "gerar posts",
+        "sugestão",
+        "mock",
+        "supabase",
+        "catalogo",
+        "catálogo",
+        "ambiente oficial",
+        "post sugerido"
       ];
       
-      const postsComPalavrasChave = postsCampanha.filter(p => {
+      let postsValidos = postsPeriodo.filter(p => {
+        const legendaLower = (p.legenda || "").toLowerCase();
+        return !excluirPalavras.some(w => legendaLower.includes(w));
+      });
+
+      // FILTRO DE CAMPANHA: legendas contendo keywords da campanha "Exterminador do Prejuízo"
+      const keywordsCampanha = [
+        "exterminador",
+        "prejuízo",
+        "prejuizo",
+        "desconto",
+        "promoção",
+        "porcelanato",
+        "campanha"
+      ];
+      
+      const postsComPalavrasChave = postsValidos.filter(p => {
         const legendaLower = (p.legenda || "").toLowerCase();
         return keywordsCampanha.some(kw => legendaLower.includes(kw));
       });
 
       if (postsComPalavrasChave.length > 0) {
-        console.log(`[Insights] Encontrados ${postsComPalavrasChave.length} posts da campanha vigente no mês atual. Analisando apenas estes.`);
+        console.log(`[Insights] Encontrados ${postsComPalavrasChave.length} posts reais da campanha vigente. Analisando apenas estes.`);
         postsCampanha = postsComPalavrasChave;
       } else {
-        console.log("[Insights] Nenhum post específico da campanha vigente encontrado. Analisando todos os posts do mês atual (exceto campanhas encerradas).");
+        console.log("[Insights] Nenhum post específico da campanha vigente encontrado. Analisando todos os posts reais do período, exceto excluídos.");
+        postsCampanha = postsValidos;
       }
     }
 
-    // 3. Fallback de Contingência (Mock Premium) - Só acionado se NENHUM post real existir
+    // 3. Strict Meta API Check - Se nenhum post real for retornado, responder com erro
     if (postsCampanha.length === 0) {
-      console.log("[Fallback] Nenhum post real encontrado nos últimos 45 dias. Ativando Mock de Contingência Premium...");
-      postsCampanha = [
-        {
-          id: "insights_mock_1",
-          tipo: "VIDEO",
-          imagem: "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/ambientes/pagina_pagina_16_ambiente_1.png",
-          legenda: "🚨 EXTERMINADOR DO PREJUÍZO ATIVO! 🚨 Venha garantir porcelanatos Ceusa com descontos Black Friday de verdade na Porcelanato Shop! O maior desconto do ano para acabar de vez com o prejuízo da sua obra!",
-          likes: 412, comments: 45, shares: 0, saves: 0, reach: 0, interacoes: 457, engajamento: 457,
-          score: (412 * 1) + (45 * 4), estimado: false,
-          permalink: "https://www.instagram.com", timestamp: new Date().toISOString(),
-          objetivoProvavel: "conversao"
-        },
-        {
-          id: "insights_mock_2",
-          tipo: "CAROUSEL_ALBUM",
-          imagem: "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/portinari/ambientes/pagina_pagina_19_ambiente_1.png",
-          legenda: "Você sabe a diferença entre Porcelanato Polido e Acetinado? 🤔 Fizemos esse carrossel educativo completo para ajudar você a decidir a melhor opção para a sua sala ou área gourmet. Confira os detalhes de Portinari!",
-          likes: 310, comments: 28, shares: 0, saves: 0, reach: 0, interacoes: 338, engajamento: 338,
-          score: (310 * 1) + (28 * 4), estimado: false,
-          permalink: "https://www.instagram.com", timestamp: new Date(Date.now() - 5*24*60*60*1000).toISOString(),
-          objetivoProvavel: "autoridade"
-        },
-        {
-          id: "insights_mock_3",
-          tipo: "VIDEO",
-          imagem: "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/ceusa/ambientes/pagina_pagina_34_ambiente_1.png",
-          legenda: "Porcelanato escorrega? 😳 Saiba como escolher o modelo antiderrapante ideal para garantir a máxima segurança da sua garagem, piscina ou varanda. Veja esse ambiente incrível com piso Ceusa e compre na promoção de porcelanato!",
-          likes: 480, comments: 32, shares: 0, saves: 0, reach: 0, interacoes: 512, engajamento: 512,
-          score: (480 * 1) + (32 * 4), estimado: false,
-          permalink: "https://www.instagram.com", timestamp: new Date(Date.now() - 10*24*60*60*1000).toISOString(),
-          objetivoProvavel: "viralizacao"
-        },
-        {
-          id: "insights_mock_4",
-          tipo: "IMAGE",
-          imagem: "https://odxqvkfmmndvsjvzzijm.supabase.co/storage/v1/object/public/catalogos-oficiais/portinari/ambientes/pagina_pagina_3_ambiente_1.png",
-          legenda: "Detalhe minimalista de porcelanato em banheiro de serviço. Preço promocional imperdível esta semana para porcelanatos Portinari na estrada da reforma!",
-          likes: 22, comments: 1, shares: 0, saves: 0, reach: 0, interacoes: 23, engajamento: 23,
-          score: (22 * 1) + (1 * 4), estimado: false,
-          permalink: "https://www.instagram.com", timestamp: new Date(Date.now() - 15*24*60*60*1000).toISOString(),
-          objetivoProvavel: "catalogo"
-        }
-      ];
+      console.log("[Insights] Nenhum post real publicado atende aos critérios no período selecionado.");
+      return res.json({
+        success: false,
+        erro: "Nenhum post real publicado encontrado na Meta API para análise."
+      });
     }
 
     // 4. Classificação automatizada por score e tipo
@@ -916,7 +884,7 @@ app.post("/instagram-insights", async (req, res) => {
 
     const promptIa = `
 Você é o Mestre Técnico de Marketing da Porcelanato Shop, um analista de tráfego pago de elite.
-Sua tarefa é analisar o desempenho dos posts da campanha de porcelanato vigente ("Exterminador do Prejuízo") nos últimos 45 dias.
+Sua tarefa é analisar o desempenho dos posts reais publicados no Instagram da campanha de porcelanato vigente ("Exterminador do Prejuízo") no mês atual. Todos os dados abaixo são oriundos exclusivamente da Meta API — nenhum dado estimado ou fictício foi incluído.
 
 Posts analisados (máximo 15 de maior performance):
 ${JSON.stringify(postsSimples, null, 2)}
