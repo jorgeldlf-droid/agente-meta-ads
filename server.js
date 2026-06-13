@@ -73,6 +73,19 @@ function detectarFornecedor(texto = "") {
   );
 }
 
+function obterFornecedorBusca(fornecedorStr) {
+  if (!fornecedorStr) return null;
+  const partes = fornecedorStr.split(',').map(s => s.trim());
+  for (const parte of partes) {
+    const match = fornecedores.find(f => f.toLowerCase() === parte.toLowerCase());
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+}
+
+
 function validarDominioOficial(url, fornecedor) {
   try {
     if (!url || !fornecedor) return false;
@@ -1247,6 +1260,7 @@ ${baseSchema}`;
           post.fornecedor ||
           detectarFornecedor(JSON.stringify(post)) ||
           "Não identificado";
+        const fornecedorBuscaImagem = obterFornecedorBusca(fornecedor) || fornecedor;
 
         // Trava de validação e consistência defensiva
         let imagemOficial = null;
@@ -1264,7 +1278,7 @@ ${baseSchema}`;
         );
 
         // 1. Extrair fornecedores individuais (tratando múltiplos fornecedores)
-        const nomesFornecedores = fornecedor.split(',')
+        const nomesFornecedores = fornecedorBuscaImagem.split(',')
           .map(s => s.trim().toLowerCase())
           .filter(s => s && s !== "não identificado");
 
@@ -1301,9 +1315,9 @@ ${baseSchema}`;
               legendaSegura = `Inspire-se com a elegância e sofisticação que os porcelanatos da ${fornecedor} trazem para o seu ambiente. Perfeito para quem busca alta durabilidade e acabamento impecável em cada detalhe de seu lar!`;
             }
 
-            if (fornecedor !== "Não identificado") {
-              console.log(`[Gerar Posts] 🔍 Buscando imagem de inspiração genérica no Serper para ${fornecedor}`);
-              imagemOficial = await buscarImagemOficial(fornecedor, "porcelanato revestimento");
+            if (fornecedorBuscaImagem !== "Não identificado") {
+              console.log(`[Gerar Posts] 🔍 Buscando imagem de inspiração genérica no Serper para ${fornecedorBuscaImagem}`);
+              imagemOficial = await buscarImagemOficial(fornecedorBuscaImagem, "porcelanato revestimento");
               imagemOficialStatus = imagemOficial ? "fallback_generico" : "produto_nao_validado";
             }
           }
@@ -1345,7 +1359,7 @@ ${baseSchema}`;
             } else {
               // Fallback se não encontrar
               const temaBusca = post.tema || post.gancho || "";
-              imagemOficial = await buscarImagemOficial(fornecedor, temaBusca);
+              imagemOficial = await buscarImagemOficial(fornecedorBuscaImagem, temaBusca);
               imagemOficialStatus = imagemOficial ? "fallback_generico" : "nao_encontrada";
             }
           } else {
@@ -1363,9 +1377,9 @@ ${baseSchema}`;
               legendaSegura = `Inspire-se com a elegância e sofisticação que os porcelanatos da ${fornecedor} trazem para o seu ambiente. Perfeito para quem busca alta durabilidade e acabamento impecável em cada detalhe de seu lar!`;
             }
 
-            if (fornecedor !== "Não identificado") {
+            if (fornecedorBuscaImagem !== "Não identificado") {
               const temaBusca = post.tema || post.gancho || "";
-              imagemOficial = await buscarImagemOficial(fornecedor, temaBusca);
+              imagemOficial = await buscarImagemOficial(fornecedorBuscaImagem, temaBusca);
               imagemOficialStatus = imagemOficial ? "fallback_generico" : "produto_nao_validado";
             }
           }
@@ -1386,60 +1400,66 @@ ${baseSchema}`;
           const donoImagem = marcasConhecidas.find(marca => imagemOficial.toLowerCase().includes(`/${marca.toLowerCase()}/`));
 
           if (donoImagem) {
-            const outrosFornecedores = marcasConhecidas.filter(m => m.toLowerCase() !== donoImagem.toLowerCase());
-            
-            const citaOutrosLegenda = outrosFornecedores.some(m => legendaFinal.toLowerCase().includes(m.toLowerCase()));
-            const citaOutrosTema = outrosFornecedores.some(m => temaFinal.toLowerCase().includes(m.toLowerCase()));
-            const citaOutrosGancho = outrosFornecedores.some(m => ganchoFinal.toLowerCase().includes(m.toLowerCase()));
-
-            if (citaOutrosLegenda || citaOutrosTema || citaOutrosGancho) {
-              console.log(`[Gerar Posts] ⚠️ Conflito de Fornecedor: Imagem é de ${donoImagem}, mas o post cita outros.`);
-              
-              const marcasOrdenadas = [...marcasConhecidas].sort((a, b) => b.length - a.length);
-              const marcaRegexStr = marcasOrdenadas.map(m => m.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
-
-              // Regex para sequências de pelo menos 2 marcas separadas por vírgula, mais, barra, "e", "ou" ou espaços
-              const seqRegex = new RegExp(`\\b(${marcaRegexStr})\\b(?:(?:\\s*(?:,|\\+|e|ou|\\/)\\s*|\\s+(?=\\b(${marcaRegexStr})\\b))\\b(${marcaRegexStr})\\b)+`, 'gi');
-              const singleRegex = new RegExp(`\\b(${marcaRegexStr})\\b`, 'gi');
-
-              const substituirPorDono = (texto) => {
-                if (!texto) return texto;
-                // 1. Substituir sequências primeiro
-                let t = texto.replace(seqRegex, donoImagem);
-                // 2. Substituir marcas individuais remanescentes (que não sejam a do próprio dono)
-                t = t.replace(singleRegex, (match) => {
-                  if (match.toLowerCase() === donoImagem.toLowerCase()) {
-                    return match;
-                  }
-                  return donoImagem;
-                });
-                return t;
-              };
-
-              let legendaTest = substituirPorDono(legendaFinal);
-              let temaTest = substituirPorDono(temaFinal);
-              let ganchoTest = substituirPorDono(ganchoFinal);
-
-              const aindaCitaOutros = outrosFornecedores.some(m => 
-                legendaTest.toLowerCase().includes(m.toLowerCase()) ||
-                temaTest.toLowerCase().includes(m.toLowerCase()) ||
-                ganchoTest.toLowerCase().includes(m.toLowerCase())
-              );
-
-              if (!aindaCitaOutros) {
-                console.log(`[Gerar Posts] 🟢 Higienização realizada com sucesso para o fornecedor único ${donoImagem}!`);
-                legendaFinal = legendaTest;
-                temaFinal = temaTest;
-                ganchoFinal = ganchoTest;
-                fornecedorFinal = donoImagem;
-              } else {
-                console.log(`[Gerar Posts] 🛡️ Fallback de Segurança: Não foi possível higienizar marcas com total precisão. Removendo imagem oficial de ${donoImagem}.`);
-                imagemOficial = null;
-                imagemOficialStatus = "fallback_generico";
-                aviso = "Imagem oficial removida por conflito de fornecedor";
-              }
+            if (fornecedor.includes(",")) {
+              // Se o post é sobre múltiplos fornecedores, mantemos o fornecedorFinal como o original
+              // e não alteramos a legenda, preservando o texto original
+              fornecedorFinal = fornecedor;
             } else {
-              fornecedorFinal = donoImagem;
+              const outrosFornecedores = marcasConhecidas.filter(m => m.toLowerCase() !== donoImagem.toLowerCase());
+              
+              const citaOutrosLegenda = outrosFornecedores.some(m => legendaFinal.toLowerCase().includes(m.toLowerCase()));
+              const citaOutrosTema = outrosFornecedores.some(m => temaFinal.toLowerCase().includes(m.toLowerCase()));
+              const citaOutrosGancho = outrosFornecedores.some(m => ganchoFinal.toLowerCase().includes(m.toLowerCase()));
+
+              if (citaOutrosLegenda || citaOutrosTema || citaOutrosGancho) {
+                console.log(`[Gerar Posts] ⚠️ Conflito de Fornecedor: Imagem é de ${donoImagem}, mas o post cita outros.`);
+                
+                const marcasOrdenadas = [...marcasConhecidas].sort((a, b) => b.length - a.length);
+                const marcaRegexStr = marcasOrdenadas.map(m => m.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+
+                // Regex para sequências de pelo menos 2 marcas separadas por vírgula, mais, barra, "e", "ou" ou espaços
+                const seqRegex = new RegExp(`\\b(${marcaRegexStr})\\b(?:(?:\\s*(?:,|\\+|e|ou|\\/)\\s*|\\s+(?=\\b(${marcaRegexStr})\\b))\\b(${marcaRegexStr})\\b)+`, 'gi');
+                const singleRegex = new RegExp(`\\b(${marcaRegexStr})\\b`, 'gi');
+
+                const substituirPorDono = (texto) => {
+                  if (!texto) return texto;
+                  // 1. Substituir sequências primeiro
+                  let t = texto.replace(seqRegex, donoImagem);
+                  // 2. Substituir marcas individuais remanescentes (que não sejam a do próprio dono)
+                  t = t.replace(singleRegex, (match) => {
+                    if (match.toLowerCase() === donoImagem.toLowerCase()) {
+                      return match;
+                    }
+                    return donoImagem;
+                  });
+                  return t;
+                };
+
+                let legendaTest = substituirPorDono(legendaFinal);
+                let temaTest = substituirPorDono(temaFinal);
+                let ganchoTest = substituirPorDono(ganchoFinal);
+
+                const aindaCitaOutros = outrosFornecedores.some(m => 
+                  legendaTest.toLowerCase().includes(m.toLowerCase()) ||
+                  temaTest.toLowerCase().includes(m.toLowerCase()) ||
+                  ganchoTest.toLowerCase().includes(m.toLowerCase())
+                );
+
+                if (!aindaCitaOutros) {
+                  console.log(`[Gerar Posts] 🟢 Higienização realizada com sucesso para o fornecedor único ${donoImagem}!`);
+                  legendaFinal = legendaTest;
+                  temaFinal = temaTest;
+                  ganchoFinal = ganchoTest;
+                  fornecedorFinal = donoImagem;
+                } else {
+                  console.log(`[Gerar Posts] 🛡️ Fallback de Segurança: Não foi possível higienizar marcas com total precisão. Removendo imagem oficial de ${donoImagem}.`);
+                  imagemOficial = null;
+                  imagemOficialStatus = "fallback_generico";
+                  aviso = "Imagem oficial removida por conflito de fornecedor";
+                }
+              } else {
+                fornecedorFinal = donoImagem;
+              }
             }
           }
         }
@@ -1466,7 +1486,7 @@ ${baseSchema}`;
           }
         }
 
-        const linksFornecedorFinal = linksFornecedores[fornecedorFinal] || [];
+        const linksFornecedorFinal = linksFornecedores[fornecedorFinal] || linksFornecedores[fornecedorBuscaImagem] || [];
 
         return {
           // CAMPOS OBRIGATÓRIOS DO FRONTEND ATUAL (NUNCA REMOVER)
