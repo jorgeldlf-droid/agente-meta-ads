@@ -32,6 +32,9 @@ const fornecedores = [
   "Delta Nova",
 ];
 
+const fornecedoresGerarPosts = ["Portinari", "Ceusa", "Eliane"];
+const fornecedorGeralPosts = "Geral";
+
 const linksFornecedores = {
   Portinari: ["https://www.portinari.com.br/"],
   Ceusa: ["https://www.ceusa.com.br/"],
@@ -63,26 +66,152 @@ function limparJson(texto) {
     .trim();
 }
 
-function detectarFornecedor(texto = "") {
+function detectarFornecedor(texto = "", listaFornecedores = fornecedores) {
   const lower = String(texto).toLowerCase();
 
   return (
-    fornecedores.find((fornecedor) =>
+    listaFornecedores.find((fornecedor) =>
       lower.includes(fornecedor.toLowerCase())
     ) || null
   );
 }
 
-function obterFornecedorBusca(fornecedorStr) {
+function obterFornecedorBusca(fornecedorStr, listaFornecedores = fornecedores) {
   if (!fornecedorStr) return null;
   const partes = fornecedorStr.split(',').map(s => s.trim());
   for (const parte of partes) {
-    const match = fornecedores.find(f => f.toLowerCase() === parte.toLowerCase());
+    const match = listaFornecedores.find(f => f.toLowerCase() === parte.toLowerCase());
     if (match) {
       return match;
     }
   }
   return null;
+}
+
+function detectarFornecedoresTexto(texto = "", listaFornecedores = fornecedores) {
+  const lower = String(texto || "").toLowerCase();
+  return listaFornecedores
+    .filter((fornecedor) => lower.includes(fornecedor.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
+}
+
+function normalizarFornecedorGerarPosts(post = {}) {
+  const textoCompleto = [
+    post.fornecedor,
+    post.tema,
+    post.gancho,
+    post.legenda,
+    post.promptImagem
+  ].filter(Boolean).join(" ");
+
+  const fornecedoresPermitidosCitados = detectarFornecedoresTexto(textoCompleto, fornecedoresGerarPosts);
+  const fornecedoresNaoPermitidosCitados = detectarFornecedoresTexto(textoCompleto, fornecedores)
+    .filter((fornecedor) => !fornecedoresGerarPosts.includes(fornecedor));
+
+  const categoria = String(post.categoriaEstrategica || "").toLowerCase();
+  const pareceEducativo =
+    categoria.includes("duvida") ||
+    categoria.includes("dúvida") ||
+    categoria.includes("educ") ||
+    categoria.includes("curios") ||
+    categoria.includes("utilidade") ||
+    Boolean(post.perguntaConsumidor);
+
+  if (pareceEducativo && fornecedoresPermitidosCitados.length === 0) {
+    return {
+      fornecedor: fornecedorGeralPosts,
+      tipoPost: "educativo",
+      fornecedoresPermitidosCitados,
+      fornecedoresNaoPermitidosCitados,
+      avisoFornecedor: null
+    };
+  }
+
+  const fornecedorUnico =
+    obterFornecedorBusca(post.fornecedor, fornecedoresGerarPosts) ||
+    fornecedoresPermitidosCitados[0] ||
+    fornecedorGeralPosts;
+
+  const tipoPost = fornecedorUnico === fornecedorGeralPosts ? "educativo" : "produto";
+  const misturaMarcas =
+    fornecedoresPermitidosCitados.filter((f) => f !== fornecedorUnico).length > 0 ||
+    fornecedoresNaoPermitidosCitados.length > 0 ||
+    String(post.fornecedor || "").includes(",");
+
+  return {
+    fornecedor: fornecedorUnico,
+    tipoPost,
+    fornecedoresPermitidosCitados,
+    fornecedoresNaoPermitidosCitados,
+    avisoFornecedor: misturaMarcas && tipoPost === "produto"
+      ? `Post ajustado para usar somente o fornecedor ${fornecedorUnico}.`
+      : null
+  };
+}
+
+function removerMarcasConflitantes(texto = "", fornecedorEscolhido) {
+  if (!texto) return "";
+  let limpo = String(texto);
+  const marcasParaRemover = fornecedores
+    .filter((marca) => marca.toLowerCase() !== String(fornecedorEscolhido).toLowerCase())
+    .sort((a, b) => b.length - a.length);
+
+  for (const marca of marcasParaRemover) {
+    const regex = new RegExp(`\\b${marca.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "gi");
+    limpo = limpo.replace(regex, fornecedorEscolhido === fornecedorGeralPosts ? "" : fornecedorEscolhido);
+  }
+
+  return limpo
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function obterFornecedorDaImagemBanco(url = "") {
+  const lower = String(url || "").toLowerCase();
+  return fornecedoresGerarPosts.find((fornecedor) =>
+    lower.includes(`/${fornecedor.toLowerCase()}/`)
+  ) || null;
+}
+
+function ambienteCombinaTema(ambiente, textoBusca = "", eTemaExterno = false) {
+  const descricao = String(ambiente?.descricao || "").toLowerCase();
+  const texto = String(textoBusca || "").toLowerCase();
+  const url = String(ambiente?.url_imagem || "").toLowerCase();
+
+  if (!ambiente?.url_imagem) return false;
+
+  if (eTemaExterno) {
+    return ["area externa", "área externa", "piscina", "fachada", "varanda", "garagem", "externo", "externa", "quintal", "antiderrapante"]
+      .some((termo) => descricao.includes(termo) || url.includes(termo));
+  }
+
+  if (!texto || !descricao) return true;
+  return descricao.split(/\s+/).some((palavra) => palavra.length > 4 && texto.includes(palavra));
+}
+
+function escolherAmbienteMesmoFornecedor(ambientesDb = [], fornecedor, textoBusca = "", eTemaExterno = false, urlEvitar = null) {
+  const ambientesFornecedor = ambientesDb.filter((amb) =>
+    amb.url_imagem &&
+    obterFornecedorDaImagemBanco(amb.url_imagem) === fornecedor &&
+    amb.url_imagem !== urlEvitar
+  );
+
+  const compativeis = ambientesFornecedor.filter((amb) => ambienteCombinaTema(amb, textoBusca, eTemaExterno));
+  const candidatos = compativeis.length > 0 ? compativeis : ambientesFornecedor;
+  if (candidatos.length === 0) return null;
+  return candidatos[Math.floor(Math.random() * candidatos.length)];
+}
+
+function criarPromptImagemEducativo(post = {}) {
+  return [
+    post.tema,
+    post.gancho,
+    post.perguntaConsumidor,
+    "imagem realista para Instagram sobre porcelanatos, ceramicas e revestimentos",
+    "sem logo, sem texto, ambiente moderno, foco no assunto do post"
+  ].filter(Boolean).join(". ");
 }
 
 
@@ -1046,7 +1175,7 @@ async function obterTopConteudosReaisHelper() {
   }
 }
 
-async function obterProdutosValidadosBanco() {
+async function obterProdutosValidadosBanco(fornecedoresPermitidos = fornecedores) {
   if (!SUPABASE_KEY || !SUPABASE_URL) {
     console.warn("⚠️ SUPABASE_URL ou SUPABASE_KEY não configurado em .env. Pulando injeção de contexto.");
     return { textoContexto: "", ambientesDb: [] };
@@ -1068,7 +1197,11 @@ async function obterProdutosValidadosBanco() {
       clearTimeout(timeoutId);
       return { textoContexto: "", ambientesDb: [] };
     }
-    const fornecedoresDb = await resF.json();
+    const fornecedoresDbRaw = await resF.json();
+    const permitidosLower = fornecedoresPermitidos.map((f) => f.toLowerCase());
+    const fornecedoresDb = fornecedoresDbRaw.filter((f) =>
+      permitidosLower.includes(String(f.nome || "").toLowerCase())
+    );
 
     // 2. Buscar imagens de catálogo tipo 'ambiente' (nossos recortes validados)
     const resI = await fetch(`${SUPABASE_URL}/rest/v1/imagens_catalogo?select=*&tipo=eq.ambiente`, {
@@ -1117,7 +1250,7 @@ async function obterProdutosValidadosBanco() {
 
 async function gerarPostsHandler(req, res) {
   try {
-    const { textoContexto: contextoBanco, ambientesDb } = await obterProdutosValidadosBanco();
+    const { textoContexto: contextoBanco, ambientesDb } = await obterProdutosValidadosBanco(fornecedoresGerarPosts);
     const topReais = await obterTopConteudosReaisHelper();
     let contextoTop = "Nenhum dado real disponível no momento. Crie conteúdos puramente baseados em tendências.";
     if (topReais.length > 0) {
@@ -1153,6 +1286,7 @@ Formato obrigatório para CADA POST:
     "legenda": "",
     "cta": "",
     "fornecedor": "",
+    "produto": "",
     "promptImagem": "",
     "perguntaConsumidor": "",
     "inspiracaoTopConteudos": "",
@@ -1167,24 +1301,31 @@ Formato obrigatório para CADA POST:
     "potencialVendaImediata": "Alto/Médio/Baixo"
   }
 ]
-Regras: O scoreComercial deve ser numérico (0 a 100). O campo promptImagem deve ser excelente para gerar imagens realistas.`;
+Regras:
+- O scoreComercial deve ser numérico (0 a 100).
+- Para post de produto, fornecedor deve ser exatamente Portinari, Ceusa ou Eliane.
+- Para post educativo/genérico, fornecedor deve ser "Geral" e produto deve ficar vazio.
+- O campo promptImagem deve ser URL oficial somente quando vier do contexto do banco; caso contrário, deve ser um prompt excelente para gerar imagem realista e bem relacionada ao assunto do post.`;
 
     // --- CÓRTEX 1: Fornecedores (2 posts) ---
     const promptFornecedores = `
 Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 2 posts para Instagram focados em FORNECEDORES e PRODUTOS.
-Fornecedores permitidos: ${fornecedores.join(", ")}.
+Fornecedores permitidos nesta etapa: ${fornecedoresGerarPosts.join(", ")}.
 
 ${contextoBanco}
 
 MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
+0. Cada post deve citar somente UMA marca. Nunca misture fornecedores no mesmo tema, gancho, legenda ou CTA.
 1. Para fornecedores que possuem "Ambientes Oficiais/Validados" listados no contexto acima (como Portinari): 
    - Crie posts comerciais focados EXCLUSIVAMENTE em um desses ambientes reais do banco.
    - Use exatamente o nome/descrição real fornecido no contexto.
+   - Preencha "produto" com essa descrição real.
    - Coloque no campo "promptImagem" a exata "URL da Imagem Oficial" fornecida para o ambiente correspondente. Isso garantirá consistência perfeita!
-2. Para fornecedores que NÃO possuem produtos ou ambientes validados no contexto (como Ceusa, Eliane, etc.):
+2. Para fornecedores que NÃO possuem produtos ou ambientes validados no contexto:
    - Você está terminantemente PROIBIDO de citar qualquer nome de modelo técnico, coleção fictícia, formato (medida) ou acabamento (como "Urban Acetinado", "60x120").
    - Crie posts de INSPIRAÇÃO GENÉRICA e de tendências de design de interiores associadas a essa marca (ex: "A elegância dos porcelanatos Ceusa", "Como paginar ambientes com Ceusa").
    - Nesses posts genéricos, deixe o campo "promptImagem" em branco ou descreva um prompt abstrato e marque a "imagemOficial" como null.
+3. Não cite Elizabeth, Embramaco, Roca, Incepa, Delta ou Delta Nova nesta sessão.
 
 Defina categoriaEstrategica como "Fornecedor".
 ${baseSchema}`;
@@ -1194,6 +1335,9 @@ ${baseSchema}`;
 Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 2 posts educativos para Instagram baseados nestas DÚVIDAS DO CONSUMIDOR:
 ${perguntasConsumidor}
 Foco: Responder a dúvida, conteúdo educativo, gerar salvamentos e alcance orgânico.
+Esses posts podem ser sobre limpeza, manutenção, escolha de porcelanato, acabamentos, curiosidades, cerâmicas e revestimentos.
+Não invente produto específico. Use fornecedor "Geral" e produto vazio, exceto se a dica for claramente sobre uma única marca permitida.
+Use promptImagem descritivo e bem relacionado ao assunto, próprio para gerar imagem IA, sem marcar como imagem oficial.
 Defina categoriaEstrategica como "Dúvida do Consumidor".
 ${baseSchema}`;
 
@@ -1203,6 +1347,9 @@ Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 3 posts p
 DADOS DOS TOP CONTEÚDOS REAIS:
 ${contextoTop}
 Alinhe também com a campanha atual: "Exterminador do Prejuízo" (humor, urgência, oferta). Não copie os posts, extraia e derive a estratégia vencedora.
+Pode criar posts educativos, curiosidades e utilidades sobre porcelanatos, cerâmicas e revestimentos. Se for produto, use somente uma marca entre ${fornecedoresGerarPosts.join(", ")}. Se for educativo/genérico, use fornecedor "Geral".
+Não cite fornecedores fora da lista permitida.
+Para posts educativos/genéricos, use promptImagem descritivo e relacionado ao tema, sem inventar produto específico.
 Defina categoriaEstrategica como "Derivado Campeão".
 ${baseSchema}`;
 
