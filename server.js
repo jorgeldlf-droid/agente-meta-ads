@@ -719,11 +719,8 @@ async function topConteudosHandler(req, res) {
       return res.status(400).json({ erro: "Não foi possível resgatar as mídias do Instagram." });
     }
 
-    const periodoMes = obterPeriodoMesVigente();
-    const midiasMesAtual = mediaData.data.filter(m => dataEstaNoMesVigente(m.timestamp, periodoMes));
-
     // 3. Processar e Calcular Métricas (Top 10)
-    const postsTratados = midiasMesAtual.map(m => {
+    const postsTratados = mediaData.data.map(m => {
       const likes = m.like_count || 0;
       const comments = m.comments_count || 0;
       
