@@ -88,6 +88,18 @@ function obterFornecedorBusca(fornecedorStr, listaFornecedores = fornecedores) {
   return null;
 }
 
+function obterPeriodoMesVigente(base = new Date()) {
+  const inicioMes = new Date(base.getFullYear(), base.getMonth(), 1);
+  const inicioProximoMes = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+  return { inicioMes, inicioProximoMes };
+}
+
+function dataEstaNoMesVigente(data, periodo = obterPeriodoMesVigente()) {
+  const dataObj = data instanceof Date ? data : new Date(data);
+  if (Number.isNaN(dataObj.getTime())) return false;
+  return dataObj >= periodo.inicioMes && dataObj < periodo.inicioProximoMes;
+}
+
 function detectarFornecedoresTexto(texto = "", listaFornecedores = fornecedores) {
   const lower = String(texto || "").toLowerCase();
   return listaFornecedores
@@ -486,12 +498,11 @@ app.post("/promocao-vigente", async (req, res) => {
       }
     }
 
-    // Filtrar posts do mês vigente (últimos 45 dias para cobrir o mês atual)
+    // Filtrar posts do mês vigente
     let postsCampanha = [];
     if (rawPosts.length > 0) {
-      const dataFiltro = new Date();
-      dataFiltro.setDate(dataFiltro.getDate() - 45);
-      postsCampanha = rawPosts.filter(p => new Date(p.timestamp) >= dataFiltro);
+      const periodoMes = obterPeriodoMesVigente();
+      postsCampanha = rawPosts.filter(p => dataEstaNoMesVigente(p.timestamp, periodoMes));
       
       // Filtrar posts com palavras chaves da campanha se houver
       const keywords = ["prejuízo", "desconto", "porcelanato", "obra", "reforma", "black", "oferta", "promocao", "promoção", "dr", "exterminador", "ceusa", "portinari", "eliane"];
@@ -708,8 +719,11 @@ async function topConteudosHandler(req, res) {
       return res.status(400).json({ erro: "Não foi possível resgatar as mídias do Instagram." });
     }
 
+    const periodoMes = obterPeriodoMesVigente();
+    const midiasMesAtual = mediaData.data.filter(m => dataEstaNoMesVigente(m.timestamp, periodoMes));
+
     // 3. Processar e Calcular Métricas (Top 10)
-    const postsTratados = mediaData.data.map(m => {
+    const postsTratados = midiasMesAtual.map(m => {
       const likes = m.like_count || 0;
       const comments = m.comments_count || 0;
       
@@ -893,7 +907,7 @@ app.post("/instagram-insights", async (req, res) => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = hoje.getMonth();
-    const primeiroDia = new Date(ano, mes, 1, 0, 0, 0, 0);
+    const { inicioMes: primeiroDia, inicioProximoMes } = obterPeriodoMesVigente(hoje);
     const ultimoDia = new Date(ano, mes + 1, 0, 23, 59, 59, 999);
     
     const formatarData = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
@@ -906,16 +920,12 @@ app.post("/instagram-insights", async (req, res) => {
       
       // Filtrar posts do mês atual
       let postsPeriodo = rawPosts.filter(p => {
-        const pDate = new Date(p.timestamp);
-        return pDate >= primeiroDia && pDate <= ultimoDia;
+        return dataEstaNoMesVigente(p.timestamp, { inicioMes: primeiroDia, inicioProximoMes });
       });
 
-      // Fallback de contingência extrema: se Meta API está offline/retornou 0 no mês atual, usar últimos 45 dias
+      // Sem fallback para mês anterior: a campanha vigente deve usar somente posts do mês atual
       if (postsPeriodo.length === 0) {
-        console.log("[Insights] Nenhum post real no mês atual. Aplicando contingência extrema dos últimos 45 dias...");
-        const dataFiltroFallback = new Date();
-        dataFiltroFallback.setDate(dataFiltroFallback.getDate() - 45);
-        postsPeriodo = rawPosts.filter(p => new Date(p.timestamp) >= dataFiltroFallback);
+        console.log("[Insights] Nenhum post real no mês atual. Mantendo análise sem posts antigos.");
       }
 
       // EXCLUSÃO OBRIGATÓRIA: Excluir qualquer post derivado de gerar posts, mock, supabase, catalogo, etc.
@@ -1157,12 +1167,15 @@ async function obterTopConteudosReaisHelper() {
     const igAccount = pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id;
     if (!igAccount) return [];
 
-    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,caption,like_count,comments_count&limit=20&access_token=${token}`);
+    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,caption,like_count,comments_count,timestamp&limit=20&access_token=${token}`);
     const mediaData = await mediaRes.json();
     
     if (!mediaData.data) return [];
 
-    const posts = mediaData.data.map(m => {
+    const periodoMes = obterPeriodoMesVigente();
+    const postsMesAtual = mediaData.data.filter(m => dataEstaNoMesVigente(m.timestamp, periodoMes));
+
+    const posts = postsMesAtual.map(m => {
       const interacoes = (m.like_count || 0) + (m.comments_count || 0);
       const legenda = typeof m.caption === "string" ? m.caption.slice(0, 120) + "..." : "Sem legenda";
       return { tipo: m.media_type, legenda, interacoes };
