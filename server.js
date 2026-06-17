@@ -216,6 +216,92 @@ function escolherAmbienteMesmoFornecedor(ambientesDb = [], fornecedor, textoBusc
   return candidatos[Math.floor(Math.random() * candidatos.length)];
 }
 
+function extrairTokensProduto(textos = []) {
+  return String(textos.filter(Boolean).join(" "))
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function temTokenProduto(tokens = [], token) {
+  return tokens.includes(String(token || "").toUpperCase());
+}
+
+function interpretarUsoProdutoBanco(fornecedor = "", descricao = "", url = "") {
+  const tokens = extrairTokensProduto([descricao, url]);
+  const fornecedorNorm = String(fornecedor || "").toLowerCase();
+
+  if (["portinari", "ceusa"].includes(fornecedorNorm)) {
+    if (temTokenProduto(tokens, "HARD")) return "porcelanato antiderrapante / externo";
+    if (temTokenProduto(tokens, "NAT")) return "porcelanato natural / interno";
+    if (temTokenProduto(tokens, "POL")) return "porcelanato polido / brilho / interno";
+    if (temTokenProduto(tokens, "ACT")) return "porcelanato acetinado / interno";
+  }
+
+  if (fornecedorNorm === "eliane") {
+    if (temTokenProduto(tokens, "EXT")) return "porcelanato antiderrapante / externo";
+    if (temTokenProduto(tokens, "PO") || temTokenProduto(tokens, "POL")) return "porcelanato polido / brilho / interno";
+    if (temTokenProduto(tokens, "NA")) return "porcelanato natural / interno";
+    if (temTokenProduto(tokens, "AC")) return "porcelanato acetinado / interno";
+  }
+
+  return "uso/acabamento não identificado pela nomenclatura";
+}
+
+function selecionarAmbienteOficialUnico(ambientesDb = [], fornecedor, imagensSugeridas = new Set()) {
+  const ambientesFornecedor = ambientesDb.filter((amb) =>
+    amb.url_imagem &&
+    obterFornecedorDaImagemBanco(amb.url_imagem) === fornecedor
+  );
+
+  const disponiveis = ambientesFornecedor.filter((amb) => !imagensSugeridas.has(amb.url_imagem));
+  const candidatos = disponiveis.length > 0 ? disponiveis : ambientesFornecedor;
+  if (candidatos.length === 0) return null;
+
+  const escolhido = candidatos[Math.floor(Math.random() * candidatos.length)];
+  imagensSugeridas.add(escolhido.url_imagem);
+
+  return {
+    ...escolhido,
+    fornecedor,
+    usoInterpretado: interpretarUsoProdutoBanco(fornecedor, escolhido.descricao, escolhido.url_imagem),
+  };
+}
+
+function escolherAmbienteAlternativoNaoUsado(ambientesDb = [], fornecedor, imagensUsadas = new Set(), urlAtual = null) {
+  const ambientesFornecedor = ambientesDb.filter((amb) =>
+    amb.url_imagem &&
+    obterFornecedorDaImagemBanco(amb.url_imagem) === fornecedor
+  );
+
+  const alternativos = ambientesFornecedor.filter((amb) =>
+    amb.url_imagem !== urlAtual &&
+    !imagensUsadas.has(amb.url_imagem)
+  );
+
+  if (alternativos.length === 0) return null;
+
+  const escolhido = alternativos[Math.floor(Math.random() * alternativos.length)];
+  return {
+    ...escolhido,
+    fornecedor,
+    usoInterpretado: interpretarUsoProdutoBanco(fornecedor, escolhido.descricao, escolhido.url_imagem),
+  };
+}
+
+function montarContextoAmbientesPrioritarios(ambientes = []) {
+  if (ambientes.length === 0) return "";
+
+  return [
+    "=== AMBIENTES OFICIAIS PRIORITÁRIOS PARA POSTS DE FORNECEDOR ===",
+    "Para posts de fornecedor específico, comece por estes produtos/imagens reais da loja. Não repita URL.",
+    ...ambientes.map((amb, index) =>
+      `${index + 1}. Fornecedor: ${amb.fornecedor} | Produto real: "${amb.descricao}" | Uso/acabamento interpretado: ${amb.usoInterpretado} | Página: ${amb.pagina} | URL da Imagem Oficial: ${amb.url_imagem}`
+    )
+  ].join("\n");
+}
+
 function criarPromptImagemEducativo(post = {}) {
   return [
     post.tema,
@@ -1274,6 +1360,12 @@ async function obterProdutosValidadosBanco(fornecedoresPermitidos = fornecedores
 async function gerarPostsHandler(req, res) {
   try {
     const { textoContexto: contextoBanco, ambientesDb } = await obterProdutosValidadosBanco(fornecedoresGerarPosts);
+    const imagensOficiaisUsadas = new Set();
+    const imagensSugeridasContexto = new Set();
+    const ambientesPrioritariosFornecedor = fornecedoresGerarPosts
+      .map((fornecedor) => selecionarAmbienteOficialUnico(ambientesDb, fornecedor, imagensSugeridasContexto))
+      .filter(Boolean);
+    const contextoAmbientesPrioritarios = montarContextoAmbientesPrioritarios(ambientesPrioritariosFornecedor);
     const topReais = await obterTopConteudosReaisHelper();
     let contextoTop = "Nenhum dado real disponível no momento. Crie conteúdos puramente baseados em tendências.";
     if (topReais.length > 0) {
@@ -1337,8 +1429,14 @@ Fornecedores permitidos nesta etapa: ${fornecedoresGerarPosts.join(", ")}.
 
 ${contextoBanco}
 
+${contextoAmbientesPrioritarios}
+
 MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
 0. Cada post deve citar somente UMA marca. Nunca misture fornecedores no mesmo tema, gancho, legenda ou CTA.
+0.1. Para posts de fornecedor específico, comece preferencialmente por produto/imagem oficial do banco.
+0.2. Use os ambientes oficiais prioritários acima como ponto de partida: primeiro produto/imagem real, depois tema, gancho, legenda e CTA.
+0.3. Use o campo "Uso/acabamento interpretado" para adequar a promessa do post: externo, interno, polido, natural, acetinado ou antiderrapante.
+0.4. Não repita a mesma URL de imagem oficial em posts diferentes.
 1. Para fornecedores que possuem "Ambientes Oficiais/Validados" listados no contexto acima (como Portinari): 
    - Crie posts comerciais focados EXCLUSIVAMENTE em um desses ambientes reais do banco.
    - Use exatamente o nome/descrição real fornecido no contexto.
@@ -1369,6 +1467,7 @@ ${baseSchema}`;
 Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 3 posts para Instagram focados em replicar os padrões dos conteúdos que MAIS FIZERAM SUCESSO.
 DADOS DOS TOP CONTEÚDOS REAIS:
 ${contextoTop}
+Use esses posts reais apenas como inspiração de linguagem, formato e gancho. Eles não devem limitar a geração nem substituir produtos reais, imagens oficiais, tendências e dúvidas comuns sobre porcelanato.
 Alinhe também com a campanha atual: "Exterminador do Prejuízo" (humor, urgência, oferta). Não copie os posts, extraia e derive a estratégia vencedora.
 Pode criar posts educativos, curiosidades e utilidades sobre porcelanatos, cerâmicas e revestimentos. Se for produto, use somente uma marca entre ${fornecedoresGerarPosts.join(", ")}. Se for educativo/genérico, use fornecedor "Geral".
 Não cite fornecedores fora da lista permitida.
@@ -1469,6 +1568,21 @@ ${baseSchema}`;
           if (matchAmb) {
             descricaoAmbiente = matchAmb.descricao || "";
           }
+
+          if (imagensOficiaisUsadas.has(imagemOficial)) {
+            const alternativa = escolherAmbienteAlternativoNaoUsado(ambientesDb, fornecedorBuscaImagem, imagensOficiaisUsadas, imagemOficial);
+            if (alternativa) {
+              imagemOficial = alternativa.url_imagem;
+              descricaoAmbiente = alternativa.descricao || "";
+              post.produto = descricaoAmbiente;
+              post.perguntaConsumidor = post.perguntaConsumidor || alternativa.usoInterpretado;
+              aviso = "Imagem oficial substituída para evitar repetição na mesma geração";
+            } else {
+              aviso = "Imagem oficial repetida por falta de alternativa disponível no catálogo";
+            }
+          }
+
+          imagensOficiaisUsadas.add(imagemOficial);
           
           if (!temCatalogoBanco) {
             // Trava anti-alucinação se não tem catálogo
@@ -1521,10 +1635,20 @@ ${baseSchema}`;
                 amb.descricao && temaBusca.includes(amb.descricao.toLowerCase())
               );
               
-              const ambEscolhido = correspondente || ambientesFiltrados[Math.floor(Math.random() * ambientesFiltrados.length)];
+              const ambientesSemRepetir = ambientesFiltrados.filter(amb => !imagensOficiaisUsadas.has(amb.url_imagem));
+              const candidatosImagem = ambientesSemRepetir.length > 0 ? ambientesSemRepetir : ambientesFiltrados;
+              const ambEscolhido = correspondente && !imagensOficiaisUsadas.has(correspondente.url_imagem)
+                ? correspondente
+                : candidatosImagem[Math.floor(Math.random() * candidatosImagem.length)];
               imagemOficial = ambEscolhido.url_imagem;
+              imagensOficiaisUsadas.add(imagemOficial);
               imagemOficialStatus = "validada_catalogo";
               descricaoAmbiente = ambEscolhido.descricao || "";
+              post.produto = post.produto || descricaoAmbiente;
+              post.perguntaConsumidor = post.perguntaConsumidor || interpretarUsoProdutoBanco(fornecedor, descricaoAmbiente, imagemOficial);
+              if (ambientesSemRepetir.length === 0 && ambientesFiltrados.length > 0) {
+                aviso = "Imagem oficial reutilizada por falta de alternativa disponível no catálogo";
+              }
               console.log(`[Gerar Posts] 🟢 Imagem do Banco recuperada como fallback dinâmico para ${fornecedor}: ${imagemOficial} (${descricaoAmbiente})`);
             } else {
               // Fallback se não encontrar
@@ -1665,6 +1789,7 @@ ${baseSchema}`;
           legenda: legendaFinal,
           cta: post.cta || "Chame no WhatsApp ou visite nossa loja física.",
           fornecedor: fornecedorFinal,
+          produto: post.produto || descricaoAmbiente || "",
           promptImagem: typeof post.promptImagem === "string" && post.promptImagem.startsWith("http")
             ? `Ambiente decorado oficial: ${temaFinal || ""}`
             : (post.promptImagem || `${temaFinal || ""}. Ambiente moderno com porcelanato premium.`),
