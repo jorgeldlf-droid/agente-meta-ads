@@ -702,6 +702,19 @@ async function topConteudosHandler(req, res) {
       return res.status(400).json({ erro: "META_ACCESS_TOKEN não configurado no .env" });
     }
 
+    const extrairInsightRanking = (midia, nomes) => {
+      const insights = midia?.insights?.data;
+      if (!Array.isArray(insights)) {
+        return 0;
+      }
+
+      const encontrado = insights.find((item) => nomes.includes(item?.name));
+      const valor = encontrado?.values?.[0]?.value ?? encontrado?.value;
+      const numero = Number(valor);
+
+      return Number.isFinite(numero) ? numero : 0;
+    };
+
     // 1. Descobrir IG Account ID
     const pageRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`);
     const pageData = await pageRes.json();
@@ -712,7 +725,7 @@ async function topConteudosHandler(req, res) {
     }
 
     // 2. Buscar mídias e métricas (Agora incluindo 'permalink')
-    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp,permalink&limit=50&access_token=${token}`);
+    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp,permalink,insights.metric(reach,shares,saved)&limit=50&access_token=${token}`);
     const mediaData = await mediaRes.json();
     
     if (!mediaData.data) {
@@ -724,9 +737,9 @@ async function topConteudosHandler(req, res) {
       const likes = m.like_count || 0;
       const comments = m.comments_count || 0;
       
-      const reach = m.reach || 0;
-      const shares = m.shares || 0;
-      const saves = m.saves || 0;
+      const reach = m.reach || extrairInsightRanking(m, ["reach"]);
+      const shares = m.shares || extrairInsightRanking(m, ["shares"]);
+      const saves = m.saves || m.saved || extrairInsightRanking(m, ["saved", "saves"]);
       
       const interacoes = likes + comments + shares + saves;
       
