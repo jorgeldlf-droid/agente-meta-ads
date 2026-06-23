@@ -100,6 +100,29 @@ function dataEstaNoMesVigente(data, periodo = obterPeriodoMesVigente()) {
   return dataObj >= periodo.inicioMes && dataObj < periodo.inicioProximoMes;
 }
 
+function detectarCampanhaPromocao(posts = []) {
+  const textoCampanha = posts
+    .map((post) => post.legenda || "")
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    textoCampanha.includes("convocação dos porcelanatos") ||
+    textoCampanha.includes("convocacao dos porcelanatos")
+  ) {
+    return "Convocação dos Porcelanatos";
+  }
+
+  if (
+    textoCampanha.includes("exterminador do prejuízo") ||
+    textoCampanha.includes("exterminador do prejuizo")
+  ) {
+    return "Exterminador do Prejuízo";
+  }
+
+  return "Campanha vigente do mês atual";
+}
+
 function detectarFornecedoresTexto(texto = "", listaFornecedores = fornecedores) {
   const lower = String(texto || "").toLowerCase();
   return listaFornecedores
@@ -300,6 +323,50 @@ function montarContextoAmbientesPrioritarios(ambientes = []) {
       `${index + 1}. Fornecedor: ${amb.fornecedor} | Produto real: "${amb.descricao}" | Uso/acabamento interpretado: ${amb.usoInterpretado} | Página: ${amb.pagina} | URL da Imagem Oficial: ${amb.url_imagem}`
     )
   ].join("\n");
+}
+
+function normalizarTextoComparacao(texto = "") {
+  return String(texto || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function precisaCorrigirComparativoPolidoAcetinado(tema = "", gancho = "", legenda = "") {
+  const contexto = normalizarTextoComparacao(`${tema} ${gancho}`);
+  const textoLegenda = normalizarTextoComparacao(legenda);
+
+  const temaComparaPolidoAcetinado =
+    contexto.includes("polido") &&
+    contexto.includes("acetinado");
+
+  if (!temaComparaPolidoAcetinado) return false;
+
+  return !(
+    textoLegenda.includes("porcelanato polido") &&
+    textoLegenda.includes("porcelanato acetinado")
+  );
+}
+
+function corrigirLegendaComparativoPolidoAcetinado(legenda = "") {
+  let texto = String(legenda || "").trim();
+
+  texto = texto
+    .replace(/\bporcelanato\s+e\s+porcelanato\b/gi, "porcelanato polido e porcelanato acetinado")
+    .replace(/\bpolido\s+e\s+acetinado\b/gi, "porcelanato polido e porcelanato acetinado")
+    .replace(/\bo polido\b/gi, "o porcelanato polido")
+    .replace(/\bo acetinado\b/gi, "o porcelanato acetinado")
+    .replace(/\bjá o\b/gi, "já o porcelanato acetinado");
+
+  const textoNormalizado = normalizarTextoComparacao(texto);
+  if (
+    textoNormalizado.includes("porcelanato polido") &&
+    textoNormalizado.includes("porcelanato acetinado")
+  ) {
+    return texto;
+  }
+
+  return `${texto} Em resumo: o porcelanato polido possui brilho mais intenso e aparência sofisticada, enquanto o porcelanato acetinado possui acabamento mais fosco, toque suave e costuma ser uma escolha prática para áreas internas.`;
 }
 
 function criarPromptImagemEducativo(post = {}) {
@@ -522,62 +589,9 @@ app.post("/promocao-vigente", async (req, res) => {
     // Tentar buscar da API se configurado
     if (token) {
       try {
-        const pageRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`);
-        const pageData = await pageRes.json();
-        const igAccount = pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id;
-        
-        if (igAccount) {
-          const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp,permalink&limit=50&access_token=${token}`);
-          const mediaData = await mediaRes.json();
-          if (mediaData.data) {
-            rawPosts = mediaData.data.map(m => {
-              const likes = m.like_count || 0;
-              const comments = m.comments_count || 0;
-              
-              // Se vier direto da API, usamos
-              let reach = m.reach || 0;
-              let shares = m.shares || 0;
-              let saves = m.saves || 0;
-              let estimado = false;
-
-              // Se não vier (comum na API básica sem escopo de insights orgânicos), estimamos e marcamos explicitamente
-              if (reach === 0 && shares === 0 && saves === 0) {
-                reach = Math.floor(likes * 8.5 + comments * 12.3);
-                shares = Math.floor(likes * 0.12 + comments * 0.4);
-                saves = Math.floor(likes * 0.18 + comments * 0.6);
-                estimado = true;
-              }
-
-              const interacoes = likes + comments + shares + saves;
-              const engajamento = reach > 0 ? parseFloat(((interacoes / reach) * 100).toFixed(2)) : interacoes;
-              const score = (likes * 1) + (comments * 4) + (shares * 5) + (saves * 6);
-
-              let imagemSegura = null;
-              if (m.media_type === "VIDEO") {
-                imagemSegura = m.thumbnail_url || null;
-              } else {
-                imagemSegura = m.media_url || null;
-              }
-
-              return {
-                id: m.id,
-                tipo: m.media_type,
-                imagem: imagemSegura,
-                legenda: m.caption || "Sem legenda",
-                likes,
-                comments,
-                shares,
-                saves,
-                reach,
-                interacoes,
-                engajamento,
-                score,
-                estimado,
-                permalink: m.permalink || null,
-                timestamp: m.timestamp
-              };
-            });
-          }
+        rawPosts = await buscarMidiasInstagramAtualizadas(token, 50);
+        if (rawPosts.length === 0) {
+          console.warn("[Promocao Vigente] Nenhuma mídia real retornada pela Meta API.");
         }
       } catch (err) {
         console.warn("[Promocao Vigente] Erro ao consumir API Meta, usando Mock Premium.", err);
@@ -670,6 +684,8 @@ app.post("/promocao-vigente", async (req, res) => {
       ];
     }
 
+    const nomeCampanhaVigente = detectarCampanhaPromocao(postsCampanha);
+
     // 2. Classificação automatizada por telemetria de métricas e score ponderado
     const postsOrdenadosPorInteracoes = [...postsCampanha].sort((a, b) => b.interacoes - a.interacoes);
     const postsOrdenadosPorAlcance = [...postsCampanha].sort((a, b) => b.reach - a.reach);
@@ -725,7 +741,7 @@ app.post("/promocao-vigente", async (req, res) => {
 
     const promptIa = `
 Você é o Mestre Técnico de Marketing da Porcelanato Shop, um analista de tráfego pago e marketing de mídias sociais de elite.
-Sua tarefa é analisar o desempenho dos posts da campanha de porcelanato vigente do mês ("Exterminador do Prejuízo").
+Sua tarefa é analisar o desempenho dos posts da campanha de porcelanato vigente do mês ("${nomeCampanhaVigente}").
 
 Aqui está a lista de posts reais analisados do Instagram (com as métricas de engajamento, alcance e score real ponderado):
 ${JSON.stringify(postsSimples, null, 2)}
@@ -739,7 +755,7 @@ REGRAS DE PESO DE MÉTRICAS QUE VOCÊ DEVE AVALIAR CRITICAMENTE:
 
 Por favor, gere uma resposta estritamente no formato JSON válido (sem tags markdown de bloco \`\`\`json nas laterais, apenas o texto bruto JSON) contendo exatamente estas duas chaves:
 1. "analiseMarkdown": Uma análise estratégica de marketing de alto nível em formato Markdown. Ela DEVE ser rica, detalhada e cobrir de forma incisiva e acionável:
-   - **Campanha Vigente**: Análise de como o tema da campanha ("Exterminador do Prejuízo") está sendo recebido pela audiência.
+   - **Campanha Vigente**: Análise de como o tema da campanha ("${nomeCampanhaVigente}") está sendo recebido pela audiência.
    - **Qual post impulsionar**: Escolha clara de qual post impulsionar, com:
      * O objetivo ideal da campanha (Alcance, Tráfego WhatsApp, Engajamento ou Reconhecimento).
      * O orçamento sugerido.
@@ -761,7 +777,7 @@ Lembre-se de retornar APENAS o JSON válido para que possamos parsear diretament
     } catch (e) {
       console.error("[Promocao Vigente] Falha ao parsear JSON retornado da IA:", e);
       analiseJson = {
-        analiseMarkdown: textoIA || `### Análise da Campanha: Exterminador do Prejuízo\n\nA promoção está gerando engajamento saudável acima de 6%. O Reels educativo sobre pisos antiderrapantes Ceusa obteve o maior engajamento proporcional, provando que sanar as preocupações dos clientes sobre segurança vende mais do que apenas focar em preço baixo. Recomenda-se impulsionar o Reels de antiderrapantes com R$150/semana de orçamento de tráfego.`,
+        analiseMarkdown: textoIA || `### Análise da Campanha: ${nomeCampanhaVigente}\n\nA promoção está gerando engajamento saudável com base nos posts reais da campanha vigente. Recomenda-se priorizar os conteúdos com maior score ponderado, salvamentos, compartilhamentos e intenção comercial para decisões de tráfego.`,
         observacoesPosts: {}
       };
     }
@@ -773,6 +789,9 @@ Lembre-se de retornar APENAS o JSON válido para que possamos parsear diretament
     res.json({
       success: true,
       analise: analiseJson.analiseMarkdown,
+      resumo: {
+        campanhaVigente: nomeCampanhaVigente
+      },
       promocaoVigente: postsCampanha
     });
   } catch (error) {
@@ -781,6 +800,8 @@ Lembre-se de retornar APENAS o JSON válido para que possamos parsear diretament
   }
 });
 
+const LIMITE_HISTORICO_INSTAGRAM = 5000;
+
 async function topConteudosHandler(req, res) {
   try {
     const token = process.env.META_ACCESS_TOKEN;
@@ -788,72 +809,24 @@ async function topConteudosHandler(req, res) {
       return res.status(400).json({ erro: "META_ACCESS_TOKEN não configurado no .env" });
     }
 
-    const extrairInsightRanking = (midia, nomes) => {
-      const insights = midia?.insights?.data;
-      if (!Array.isArray(insights)) {
-        return 0;
-      }
+    const historicoCompleto = String(
+      req.query?.historico || req.body?.historico || ""
+    ).toLowerCase() === "all";
 
-      const encontrado = insights.find((item) => nomes.includes(item?.name));
-      const valor = encontrado?.values?.[0]?.value ?? encontrado?.value;
-      const numero = Number(valor);
+    const limiteMidias = obterLimiteMeta(req, 25, 50);
+    const postsTratados = historicoCompleto
+      ? await buscarHistoricoCompletoInstagram(token, LIMITE_HISTORICO_INSTAGRAM)
+      : await buscarMidiasInstagramAtualizadas(token, limiteMidias);
 
-      return Number.isFinite(numero) ? numero : 0;
-    };
+    const topConteudos = [...postsTratados].sort((a, b) => b.interacoes - a.interacoes);
 
-    // 1. Descobrir IG Account ID
-    const pageRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`);
-    const pageData = await pageRes.json();
-    
-    const igAccount = pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id;
-    if (!igAccount) {
-      return res.status(400).json({ erro: "Nenhuma conta Instagram vinculada identificada." });
-    }
-
-    // 2. Buscar mídias e métricas (Agora incluindo 'permalink')
-    const mediaRes = await fetch(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,media_type,media_url,thumbnail_url,caption,like_count,comments_count,timestamp,permalink,insights.metric(reach,shares,saved)&limit=50&access_token=${token}`);
-    const mediaData = await mediaRes.json();
-    
-    if (!mediaData.data) {
-      return res.status(400).json({ erro: "Não foi possível resgatar as mídias do Instagram." });
-    }
-
-    // 3. Processar e Calcular Métricas (Top 10)
-    const postsTratados = mediaData.data.map(m => {
-      const likes = m.like_count || 0;
-      const comments = m.comments_count || 0;
-      
-      const reach = m.reach || extrairInsightRanking(m, ["reach"]);
-      const shares = m.shares || extrairInsightRanking(m, ["shares"]);
-      const saves = m.saves || m.saved || extrairInsightRanking(m, ["saved", "saves"]);
-      
-      const interacoes = likes + comments + shares + saves;
-      
-      let engajamento = reach > 0 ? ((interacoes / reach) * 100).toFixed(2) : interacoes;
-
-      let imagemSegura = null;
-      if (m.media_type === "VIDEO") {
-        imagemSegura = m.thumbnail_url || null;
-      } else if (m.media_type === "IMAGE" || m.media_type === "CAROUSEL_ALBUM") {
-        imagemSegura = m.media_url || null;
-      }
-      
-      const legendaSegura = typeof m.caption === "string" 
-        ? (m.caption.length > 120 ? m.caption.slice(0, 120) + "..." : m.caption) 
-        : "Sem legenda";
-      
-      return {
-        id: m.id, tipo: m.media_type, imagem: imagemSegura,
-        legenda: legendaSegura,
-        permalink: m.permalink || null,
-        likes, comments, shares, saves, reach, interacoes, engajamento,
-        data: new Date(m.timestamp).toLocaleDateString("pt-BR")
-      };
+    res.json({
+      success: true,
+      topConteudos,
+      historico: historicoCompleto,
+      totalCarregado: topConteudos.length,
+      limiteSegurancaAtingido: historicoCompleto && topConteudos.length >= LIMITE_HISTORICO_INSTAGRAM,
     });
-
-    const top10 = postsTratados.sort((a, b) => b.interacoes - a.interacoes).slice(0, 10);
-
-    res.json({ success: true, topConteudos: top10 });
   } catch (error) {
     console.error("Erro /top-conteudos:", error);
     res.status(500).json({ erro: "Erro ao buscar conteúdos reais na Meta API" });
@@ -912,84 +885,209 @@ const fetchWithTimeout = async (url, options = {}, timeout = 12000) => {
   }
 };
 
+function extrairInsightInstagram(midia, nomes) {
+  const insights = midia?.insights?.data;
+  if (!Array.isArray(insights)) return null;
+
+  const encontrado = insights.find((item) => nomes.includes(item?.name));
+  const valor = encontrado?.values?.[0]?.value ?? encontrado?.value;
+  const numero = Number(valor);
+
+  return Number.isFinite(numero) ? numero : null;
+}
+
+function calcularMetricasReaisInstagram(midia) {
+  const isReel =
+    midia.media_product_type === "REELS" ||
+    (!midia.media_product_type && midia.media_type === "VIDEO");
+  const totalLikesReel = isReel ? extrairInsightInstagram(midia, ["total_likes"]) : null;
+  const totalCommentsReel = isReel ? extrairInsightInstagram(midia, ["total_comments"]) : null;
+  const viewsReel = isReel ? extrairInsightInstagram(midia, ["total_views", "views"]) : null;
+  const repostsReel = isReel ? extrairInsightInstagram(midia, ["reposts"]) : null;
+
+  const likes = Number(totalLikesReel ?? midia.like_count ?? 0);
+  const comments = Number(totalCommentsReel ?? midia.comments_count ?? 0);
+  const reach = extrairInsightInstagram(midia, ["reach"]);
+  const shares = extrairInsightInstagram(midia, ["shares"]);
+  const saves = extrairInsightInstagram(midia, ["saved", "saves"]);
+  const insightsIncompletos = reach === null || shares === null || saves === null;
+  const metricasOrigem = totalLikesReel !== null || totalCommentsReel !== null
+    ? "reels_total"
+    : "media_public_fields";
+
+  const reachSeguro = reach ?? 0;
+  const sharesSeguro = shares ?? 0;
+  const savesSeguro = saves ?? 0;
+  const viewsSeguro = viewsReel ?? 0;
+  const repostsSeguro = repostsReel ?? 0;
+  const interacoes = likes + comments + sharesSeguro + savesSeguro;
+  const engajamento = reachSeguro > 0
+    ? Number(((interacoes / reachSeguro) * 100).toFixed(2))
+    : 0;
+  const score = likes + comments * 4 + sharesSeguro * 5 + savesSeguro * 6;
+
+  return {
+    likes,
+    comments,
+    shares: sharesSeguro,
+    saves: savesSeguro,
+    reach: reachSeguro,
+    views: viewsSeguro,
+    reposts: repostsSeguro,
+    interacoes,
+    engajamento,
+    score,
+    estimado: false,
+    metricasDesatualizadas: insightsIncompletos,
+    metricasOrigem
+  };
+}
+
+function obterLimiteMeta(req, padrao = 25, maximo = 50) {
+  const valor = Number(req.body?.limit || req.query?.limit || padrao);
+  return Math.min(Math.max(valor, 1), maximo);
+}
+
+function montarMidiaInstagram(midiaBase, midiaComInsights = null) {
+  const origemMetricas = midiaComInsights
+    ? { ...midiaBase, insights: midiaComInsights.insights }
+    : midiaBase;
+  const metricas = calcularMetricasReaisInstagram(origemMetricas);
+
+  let imagemSegura = null;
+  if (midiaBase.media_type === "VIDEO") {
+    imagemSegura = midiaBase.thumbnail_url || midiaBase.media_url || null;
+  } else {
+    imagemSegura = midiaBase.media_url || midiaBase.thumbnail_url || null;
+  }
+
+  return {
+    id: midiaBase.id,
+    tipo: midiaBase.media_type || "IMAGE",
+    imagem: imagemSegura,
+    legenda: typeof midiaBase.caption === "string" ? midiaBase.caption : "Sem legenda",
+    permalink: typeof midiaBase.permalink === "string" && midiaBase.permalink.startsWith("http") ? midiaBase.permalink : null,
+    timestamp: midiaBase.timestamp || new Date().toISOString(),
+    data: midiaBase.timestamp ? new Date(midiaBase.timestamp).toLocaleDateString("pt-BR") : "-",
+    ...metricas
+  };
+}
+
+async function buscarInstagramBusinessId(token) {
+  if (process.env.INSTAGRAM_BUSINESS_ID) {
+    return process.env.INSTAGRAM_BUSINESS_ID;
+  }
+
+  const pageRes = await fetchWithTimeout(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`, {}, 10000);
+  const pageData = await pageRes.json();
+  return pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id || null;
+}
+
+async function buscarPaginasInstagram(urlInicial, limiteSeguranca) {
+  const midias = [];
+  const urlsVisitadas = new Set();
+  let proximaUrl = urlInicial;
+
+  while (
+    proximaUrl &&
+    midias.length < limiteSeguranca &&
+    !urlsVisitadas.has(proximaUrl)
+  ) {
+    urlsVisitadas.add(proximaUrl);
+
+    const resposta = await fetchWithTimeout(proximaUrl, {}, 12000);
+    const dados = await resposta.json();
+
+    if (dados.error) {
+      throw new Error(dados.error.message || "Erro ao paginar mídias do Instagram");
+    }
+
+    const pagina = Array.isArray(dados.data) ? dados.data : [];
+    const restante = limiteSeguranca - midias.length;
+    midias.push(...pagina.slice(0, restante));
+
+    proximaUrl = dados.paging?.next || null;
+  }
+
+  return midias;
+}
+
+async function buscarHistoricoCompletoInstagram(token, limiteSeguranca = LIMITE_HISTORICO_INSTAGRAM) {
+  const igAccount = await buscarInstagramBusinessId(token);
+  if (!igAccount) return [];
+
+  const baseFields = "id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count";
+  const insightFields = `${baseFields},insights.metric(reach,shares,saved,total_likes,total_comments,total_views,views,reposts)`;
+
+  const urlBase =
+    `https://graph.facebook.com/v18.0/${igAccount}/media` +
+    `?fields=${baseFields}&limit=50&access_token=${token}`;
+
+  const midiasBase = await buscarPaginasInstagram(urlBase, limiteSeguranca);
+  if (midiasBase.length === 0) return [];
+
+  let insightsPorId = new Map();
+
+  try {
+    const urlInsights =
+      `https://graph.facebook.com/v18.0/${igAccount}/media` +
+      `?fields=${insightFields}&limit=50&access_token=${token}`;
+
+    const midiasComInsights = await buscarPaginasInstagram(urlInsights, limiteSeguranca);
+    insightsPorId = new Map(midiasComInsights.map((midia) => [midia.id, midia]));
+  } catch (error) {
+    console.warn(
+      "[Meta API] Falha ao buscar insights do histórico. Mantendo mídia-base.",
+      error.message
+    );
+  }
+
+  return midiasBase.map((midia) =>
+    montarMidiaInstagram(midia, insightsPorId.get(midia.id))
+  );
+}
+
+async function buscarMidiasInstagramAtualizadas(token, limit = 25) {
+  const igAccount = await buscarInstagramBusinessId(token);
+  if (!igAccount) return [];
+
+  const baseFields = "id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count";
+  const baseRes = await fetchWithTimeout(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=${baseFields}&limit=${limit}&access_token=${token}`, {}, 12000);
+  const baseData = await baseRes.json();
+
+  if (!Array.isArray(baseData.data) || baseData.data.length === 0) {
+    return [];
+  }
+
+  let insightsPorId = new Map();
+  try {
+    const insightFields = `${baseFields},insights.metric(reach,shares,saved,total_likes,total_comments,total_views,views,reposts)`;
+    const insightsRes = await fetchWithTimeout(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=${insightFields}&limit=${limit}&access_token=${token}`, {}, 12000);
+    const insightsData = await insightsRes.json();
+    if (Array.isArray(insightsData.data)) {
+      insightsPorId = new Map(insightsData.data.map((m) => [m.id, m]));
+    }
+  } catch (err) {
+    console.warn("[Meta API] Falha ao buscar insights orgânicos. Mantendo likes/comments reais.", err.message);
+  }
+
+  return baseData.data.map((m) => montarMidiaInstagram(m, insightsPorId.get(m.id)));
+}
+
 app.post("/instagram-insights", async (req, res) => {
   console.log("[Insights] Nova requisição POST /instagram-insights iniciada.");
   try {
     const token = process.env.META_ACCESS_TOKEN;
     let rawPosts = [];
+    const apenasMetricas = req.body?.apenasMetricas === true;
+    const limiteMidias = obterLimiteMeta(req, 25, 50);
 
     // 1. Tentar obter dados reais via Meta API
     if (token) {
       try {
         console.log("[Meta API] Token de acesso Meta presente. Buscando Instagram Business ID...");
-        let igAccount = process.env.INSTAGRAM_BUSINESS_ID;
-
-        if (igAccount) {
-          console.log(`[Meta API] Utilizando INSTAGRAM_BUSINESS_ID configurado diretamente no .env: ${igAccount}`);
-        } else {
-          console.log("[Meta API] INSTAGRAM_BUSINESS_ID não configurado. Tentando recuperar via fallback '/me/accounts' com timeout de 10s...");
-          const pageRes = await fetchWithTimeout(`https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${token}`, {}, 10000);
-          const pageData = await pageRes.json();
-          igAccount = pageData.data?.find(p => p.instagram_business_account)?.instagram_business_account?.id;
-        }
-
-        if (igAccount) {
-          console.log(`[Meta API] ID da conta do Instagram localizado: ${igAccount}. Buscando mídias com timeout de 12s...`);
-          // IMPORTANTE: fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count
-          const mediaRes = await fetchWithTimeout(`https://graph.facebook.com/v18.0/${igAccount}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=50&access_token=${token}`, {}, 12000);
-          const mediaData = await mediaRes.json();
-          
-          if (mediaData.data && mediaData.data.length > 0) {
-            console.log(`[Meta API] ${mediaData.data.length} posts brutos recuperados com sucesso.`);
-            rawPosts = mediaData.data.map(m => {
-              const likes = m.like_count || 0;
-              const comments = m.comments_count || 0;
-              
-              // Mantém as métricas reais fornecidas pela API, sem estimar métricas falsas.
-              const reach = 0;
-              const shares = 0;
-              const saves = 0;
-              const estimado = false;
-
-              const interacoes = likes + comments + shares + saves;
-              const engajamento = reach > 0 ? parseFloat(((interacoes / reach) * 100).toFixed(2)) : interacoes;
-              
-              // Score ponderado solicitado: likes*1 + comments*4 + shares*5 + saves*6
-              const score = (likes * 1) + (comments * 4) + (shares * 5) + (saves * 6);
-
-              // Proteção total contra valores nulos/indefinidos
-              let imagemSegura = null;
-              if (m.media_type === "VIDEO") {
-                imagemSegura = m.thumbnail_url || m.media_url || null;
-              } else {
-                imagemSegura = m.media_url || m.thumbnail_url || null;
-              }
-
-              const legendaSegura = typeof m.caption === "string" ? m.caption : "Sem legenda";
-              const permalinkSeguro = (typeof m.permalink === "string" && m.permalink.startsWith("http")) ? m.permalink : null;
-
-              return {
-                id: m.id,
-                tipo: m.media_type || "IMAGE",
-                imagem: imagemSegura,
-                legenda: legendaSegura,
-                likes,
-                comments,
-                shares,
-                saves,
-                reach,
-                interacoes,
-                engajamento,
-                score,
-                estimado,
-                permalink: permalinkSeguro,
-                timestamp: m.timestamp || new Date().toISOString()
-              };
-            });
-          } else {
-            console.log("[Meta API] Nenhuma mídia encontrada na conta do Instagram.");
-          }
-        } else {
+        rawPosts = await buscarMidiasInstagramAtualizadas(token, limiteMidias);
+        if (rawPosts.length === 0) {
           console.warn("[Meta API] Falha ao recuperar ID da conta de negócios do Instagram.");
         }
       } catch (err) {
@@ -1109,6 +1207,22 @@ app.post("/instagram-insights", async (req, res) => {
     const topScorePost = postsCampanha.find(p => p.id === ordenadosScore[0]?.id);
     if (topScorePost) {
       topScorePost.recomendacaoImpulsionamento = true;
+    }
+
+    if (apenasMetricas) {
+      return res.json({
+        success: true,
+        resumo: {
+          totalPostsAnalisados: postsCampanha.length,
+          periodo: periodoStr,
+          criterioAnalise: "Posts do mês atual",
+          campanhaVigente: "Campanha vigente do mês atual",
+          melhorPost: topScorePost ? topScorePost.legenda.slice(0, 50) + "..." : "Não identificado",
+          melhorFormato: topScorePost ? (topScorePost.tipo === "VIDEO" ? "Reels" : "Carrossel") : "Não identificado",
+          recomendacaoPrincipal: "Métricas atualizadas pela Meta API. Abra o módulo para gerar a análise estratégica completa."
+        },
+        postsInsights: postsCampanha
+      });
     }
 
     // 5. Preparação dos posts para a OpenAI - Ordenado por Score e Limitado a no máximo 15 posts
@@ -1420,6 +1534,9 @@ Regras:
 - O scoreComercial deve ser numérico (0 a 100).
 - Para post de produto, fornecedor deve ser exatamente Portinari, Ceusa ou Eliane.
 - Para post educativo/genérico, fornecedor deve ser "Geral" e produto deve ficar vazio.
+- Quando o tema comparar dois produtos, acabamentos ou categorias, cite explicitamente os dois nomes completos durante toda a legenda. Nunca substitua por termos genéricos ou pronomes como "o produto", "o porcelanato", "ele", "o mesmo" ou "o". Exemplo correto: "o porcelanato polido possui brilho intenso" e "o porcelanato acetinado possui acabamento fosco". Exemplo incorreto: "o porcelanato possui brilho intenso" ou "já o possui acabamento fosco".
+- Não use nomes de campanhas internas como base principal para tema, gancho, legenda ou CTA. Evite citar "Exterminador do Prejuízo", "Matrix Descontos", "Convocação", "Operação" ou expressões como "campanha [nome da campanha]", salvo autorização explícita no pedido.
+- Campanhas internas servem apenas como contexto promocional. O texto final deve priorizar fornecedor, produto/coleção, ambiente da imagem, acabamento, benefício real para o cliente e convite para WhatsApp ou loja física.
 - O campo promptImagem deve ser URL oficial somente quando vier do contexto do banco; caso contrário, deve ser um prompt excelente para gerar imagem realista e bem relacionada ao assunto do post.`;
 
     // --- CÓRTEX 1: Fornecedores (2 posts) ---
@@ -1468,7 +1585,7 @@ Atue como Motor Inteligente de Marketing para a Porcelanato Shop. Crie 3 posts p
 DADOS DOS TOP CONTEÚDOS REAIS:
 ${contextoTop}
 Use esses posts reais apenas como inspiração de linguagem, formato e gancho. Eles não devem limitar a geração nem substituir produtos reais, imagens oficiais, tendências e dúvidas comuns sobre porcelanato.
-Alinhe também com a campanha atual: "Exterminador do Prejuízo" (humor, urgência, oferta). Não copie os posts, extraia e derive a estratégia vencedora.
+Use a campanha atual apenas como contexto interno de promoção, sem citar nomes de campanhas internas no texto final. Não copie os posts; extraia a estratégia vencedora e transforme em tema, gancho, legenda e CTA claros para o cliente.
 Pode criar posts educativos, curiosidades e utilidades sobre porcelanatos, cerâmicas e revestimentos. Se for produto, use somente uma marca entre ${fornecedoresGerarPosts.join(", ")}. Se for educativo/genérico, use fornecedor "Geral".
 Não cite fornecedores fora da lista permitida.
 Para posts educativos/genéricos, use promptImagem descritivo e relacionado ao tema, sem inventar produto específico.
@@ -1578,11 +1695,15 @@ ${baseSchema}`;
               post.perguntaConsumidor = post.perguntaConsumidor || alternativa.usoInterpretado;
               aviso = "Imagem oficial substituída para evitar repetição na mesma geração";
             } else {
-              aviso = "Imagem oficial repetida por falta de alternativa disponível no catálogo";
+              imagemOficial = null;
+              imagemOficialStatus = "nao_encontrada";
+              aviso = "Imagem oficial não usada por falta de alternativa disponível no catálogo";
             }
           }
 
-          imagensOficiaisUsadas.add(imagemOficial);
+          if (imagemOficial) {
+            imagensOficiaisUsadas.add(imagemOficial);
+          }
           
           if (!temCatalogoBanco) {
             // Trava anti-alucinação se não tem catálogo
@@ -1636,20 +1757,25 @@ ${baseSchema}`;
               );
               
               const ambientesSemRepetir = ambientesFiltrados.filter(amb => !imagensOficiaisUsadas.has(amb.url_imagem));
-              const candidatosImagem = ambientesSemRepetir.length > 0 ? ambientesSemRepetir : ambientesFiltrados;
+              const candidatosImagem = ambientesSemRepetir;
               const ambEscolhido = correspondente && !imagensOficiaisUsadas.has(correspondente.url_imagem)
                 ? correspondente
                 : candidatosImagem[Math.floor(Math.random() * candidatosImagem.length)];
-              imagemOficial = ambEscolhido.url_imagem;
-              imagensOficiaisUsadas.add(imagemOficial);
-              imagemOficialStatus = "validada_catalogo";
-              descricaoAmbiente = ambEscolhido.descricao || "";
-              post.produto = post.produto || descricaoAmbiente;
-              post.perguntaConsumidor = post.perguntaConsumidor || interpretarUsoProdutoBanco(fornecedor, descricaoAmbiente, imagemOficial);
-              if (ambientesSemRepetir.length === 0 && ambientesFiltrados.length > 0) {
-                aviso = "Imagem oficial reutilizada por falta de alternativa disponível no catálogo";
+
+              if (ambEscolhido) {
+                imagemOficial = ambEscolhido.url_imagem;
+                imagensOficiaisUsadas.add(imagemOficial);
+                imagemOficialStatus = "validada_catalogo";
+                descricaoAmbiente = ambEscolhido.descricao || "";
+                post.produto = post.produto || descricaoAmbiente;
+                post.perguntaConsumidor = post.perguntaConsumidor || interpretarUsoProdutoBanco(fornecedor, descricaoAmbiente, imagemOficial);
+                console.log(`[Gerar Posts] 🟢 Imagem do Banco recuperada como fallback dinâmico para ${fornecedor}: ${imagemOficial} (${descricaoAmbiente})`);
+              } else {
+                imagemOficial = null;
+                imagemOficialStatus = "nao_encontrada";
+                aviso = "Nenhuma imagem oficial alternativa disponível no catálogo para esta geração";
+                console.warn(`[Gerar Posts] ⚠️ Imagem oficial omitida para evitar repetição: ${fornecedor}`);
               }
-              console.log(`[Gerar Posts] 🟢 Imagem do Banco recuperada como fallback dinâmico para ${fornecedor}: ${imagemOficial} (${descricaoAmbiente})`);
             } else {
               // Fallback se não encontrar
               const temaBusca = post.tema || post.gancho || "";
@@ -1778,6 +1904,11 @@ ${baseSchema}`;
               aviso = "Imagem oficial removida por incompatibilidade com tema externo";
             }
           }
+        }
+
+        if (precisaCorrigirComparativoPolidoAcetinado(temaFinal, ganchoFinal, legendaFinal)) {
+          legendaFinal = corrigirLegendaComparativoPolidoAcetinado(legendaFinal);
+          aviso = aviso || "Legenda comparativa corrigida para citar porcelanato polido e porcelanato acetinado";
         }
 
         const linksFornecedorFinal = linksFornecedores[fornecedorFinal] || linksFornecedores[fornecedorBuscaImagem] || [];

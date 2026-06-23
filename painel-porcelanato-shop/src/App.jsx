@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const API_BASE = "http://localhost:3001";
 
@@ -40,6 +40,41 @@ const rotas = [
     endpoint: "/tendencias-fabricas",
   },
 ];
+
+const abasTopConteudos = [
+  { id: "performance", titulo: "🏆 Top Performance" },
+  { id: "alcance", titulo: "▶️ Top Visualizações" },
+  { id: "conversao", titulo: "🛒 Top Intenção de Compra" },
+  { id: "engajamento", titulo: "❤️ Top Engajamento" },
+  { id: "viralizacao", titulo: "🔥 Top Viralização" },
+];
+
+const periodosTopConteudos = [
+  { id: "30d", titulo: "Últimos 30 dias", dias: 30 },
+  { id: "90d", titulo: "Últimos 90 dias", dias: 90 },
+  { id: "6m", titulo: "Últimos 6 meses", dias: 180 },
+  { id: "1y", titulo: "Último ano", dias: 365 },
+  { id: "all", titulo: "Todo histórico", dias: null },
+];
+
+const subtitulosRankingsTopConteudos = {
+  performance: "Fórmula: engajamento relativo × 40 + compartilhamentos relativos × 25 + salvamentos relativos × 25 + alcance relativo × 10.",
+  alcance: "Fórmula: ranking ordenado do maior para o menor número de visualizações/reproduções.",
+  conversao: "Fórmula: (salvamentos × 2) + (compartilhamentos × 2) + comentários.",
+  engajamento: "Fórmula: (interações ÷ alcance) × 100.",
+  viralizacao: "Fórmula: (compartilhamentos ÷ alcance) × 100. Conteúdos com alcance < 500 e interações < 50 têm taxa zerada.",
+};
+
+function normalizarFormatoInstagram(valor) {
+  const chave = String(valor || "").trim().toUpperCase();
+
+  if (chave === "REELS" || chave === "REEL" || chave === "ROLOS" || chave === "BOBINAS") return "Reels";
+  if (chave === "CAROUSEL_ALBUM" || chave === "CAROUSEL") return "Carrossel";
+  if (chave === "IMAGE") return "Imagem";
+  if (chave === "VIDEO") return "Vídeo";
+
+  return "Outro";
+}
 
 function numero(valor) {
   if (!valor) return "0";
@@ -93,6 +128,94 @@ function resumoMetricas(data, posts) {
     alcance,
     interacoes,
     compartilhamentos,
+  };
+}
+
+function valorNumero(valor) {
+  const numeroConvertido = Number(valor || 0);
+  return Number.isFinite(numeroConvertido) ? numeroConvertido : 0;
+}
+
+function filtrarPostsPorPeriodo(lista, periodoId) {
+  const periodo = periodosTopConteudos.find((item) => item.id === periodoId);
+  if (!periodo || !periodo.dias) return lista;
+
+  const limite = new Date();
+  limite.setDate(limite.getDate() - periodo.dias);
+
+  return lista.filter((post) => {
+    const dataPost = new Date(post.timestamp);
+    return !Number.isNaN(dataPost.getTime()) && dataPost >= limite;
+  });
+}
+
+function calcularRankingsTopConteudos(lista) {
+  const maiorEngajamento = Math.max(...lista.map((p) => valorNumero(p.engajamento)), 0);
+  const maiorShares = Math.max(...lista.map((p) => valorNumero(p.shares)), 0);
+  const maiorSaves = Math.max(...lista.map((p) => valorNumero(p.saves)), 0);
+  const maiorReach = Math.max(...lista.map((p) => valorNumero(p.reach)), 0);
+
+  const normalizar = (valor, maximo) => maximo > 0 ? valorNumero(valor) / maximo : 0;
+  const comScores = lista.map((post) => {
+    const scorePerformance =
+      normalizar(post.engajamento, maiorEngajamento) * 40 +
+      normalizar(post.shares, maiorShares) * 25 +
+      normalizar(post.saves, maiorSaves) * 25 +
+      normalizar(post.reach, maiorReach) * 10;
+
+    const scoreConversao =
+      valorNumero(post.saves) * 2 +
+      valorNumero(post.shares) * 2 +
+      valorNumero(post.comments);
+
+    const reach = valorNumero(post.reach);
+    const interacoes = valorNumero(post.interacoes);
+    const scoreViralizacao = reach < 500 && interacoes < 50
+      ? 0
+      : reach > 0
+        ? valorNumero(post.shares) / reach
+        : 0;
+
+    const scoreViralizacaoQualificada =
+      post.metricasDesatualizadas || reach < 500
+        ? 0
+        : scoreViralizacao;
+
+    const scorePerformanceQualificado =
+      post.metricasDesatualizadas || reach < 500
+        ? 0
+        : scorePerformance;
+
+    const scoreEngajamentoQualificado =
+      post.metricasDesatualizadas || reach < 500
+        ? 0
+        : valorNumero(post.engajamento);
+
+    const componentesPerformance = {
+      engajamento: normalizar(post.engajamento, maiorEngajamento) * 40,
+      compartilhamentos: normalizar(post.shares, maiorShares) * 25,
+      salvamentos: normalizar(post.saves, maiorSaves) * 25,
+      alcance: normalizar(post.reach, maiorReach) * 10,
+    };
+
+    return {
+      ...post,
+      scorePerformance: Number(scorePerformance.toFixed(2)),
+      scoreConversao,
+      scoreViralizacao,
+      scoreViralizacaoQualificada,
+      scorePerformanceQualificado,
+      scoreEngajamentoQualificado,
+      componentesPerformance,
+    };
+  });
+
+  return {
+    performance: [...comScores].sort((a, b) => b.scorePerformanceQualificado - a.scorePerformanceQualificado),
+    alcance: [...comScores].sort((a, b) => valorNumero(b.views) - valorNumero(a.views)),
+    conversao: [...comScores].sort((a, b) => valorNumero(b.scoreConversao) - valorNumero(a.scoreConversao)),
+    engajamento: [...comScores].sort((a, b) => b.scoreEngajamentoQualificado - a.scoreEngajamentoQualificado),
+    viralizacao: [...comScores].sort((a, b) => b.scoreViralizacaoQualificada - a.scoreViralizacaoQualificada),
   };
 }
 
@@ -280,15 +403,115 @@ function PostCard({ post, index, onGerarImagem, gerando }) {
   );
 }
 
+function formatarPontos(valor) {
+  return valorNumero(valor).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatarPercentual(valor) {
+  return `${formatarPontos(valor)}%`;
+}
+
+function ExplicacaoRankingTopConteudos({ post, rankingSelecionado, ranking, totalConteudos }) {
+  const resumoCompacto = {
+    marginTop: "12px",
+    padding: "10px",
+    background: "#fff8dc",
+    border: "1px solid #f1d77c",
+    borderRadius: "8px",
+    color: "#5f4b00",
+    fontSize: "13px",
+  };
+
+  if (rankingSelecionado === "performance") {
+    const componentes = post.componentesPerformance || {};
+    const notaNaoQualificada =
+      post.metricasDesatualizadas || valorNumero(post.reach) < 500;
+
+    return <div style={resumoCompacto}>
+      <strong>🏆 Nota Performance: {formatarPontos(post.scorePerformance)} pts</strong>
+      <div style={{ marginTop: "6px" }}>
+        📈 Engajamento: {formatarPontos(componentes.engajamento)} pts
+        {" | "}↗️ Shares: {formatarPontos(componentes.compartilhamentos)} pts
+        {" | "}💾 Salvos: {formatarPontos(componentes.salvamentos)} pts
+        {" | "}👀 Alcance: {formatarPontos(componentes.alcance)} pts
+      </div>
+      {notaNaoQualificada && (
+        <div style={{ marginTop: "6px" }}>
+          Nota não qualificada para ranking porque o alcance ficou abaixo de 500 ou as métricas estão incompletas.
+        </div>
+      )}
+    </div>;
+  }
+
+  if (rankingSelecionado === "alcance") return <div style={resumoCompacto}>
+    <strong>▶️ Visualizações: {numero(post.views)}</strong>
+    <div style={{ marginTop: "6px" }}>🏅 Posição: #{ranking} de {totalConteudos}</div>
+  </div>;
+
+  if (rankingSelecionado === "conversao") return <div style={resumoCompacto}>
+    <strong>🛒 Nota Intenção: {post.scoreConversao || 0} pts</strong>
+    <div style={{ marginTop: "6px" }}>
+      💾 Salvos: {numero(post.saves)}
+      {" | "}↗️ Shares: {numero(post.shares)}
+      {" | "}💬 Comentários: {numero(post.comments)}
+    </div>
+  </div>;
+
+  if (rankingSelecionado === "engajamento") {
+    const interacoes = valorNumero(post.interacoes);
+    const alcance = valorNumero(post.reach);
+    const taxaEngajamento = valorNumero(post.engajamento);
+    const alcanceAbaixoDoMinimo = alcance < 500;
+
+    return <div style={resumoCompacto}>
+      <strong>❤️ Engajamento: {formatarPercentual(taxaEngajamento)}</strong>
+      <div style={{ marginTop: "6px" }}>
+        🔥 Interações: {numero(interacoes)} {" | "}👀 Alcance: {numero(alcance)}
+      </div>
+      {alcanceAbaixoDoMinimo && (
+        <div style={{ marginTop: "6px" }}>
+          Taxa não qualificada para ranking porque o alcance ficou abaixo de 500.
+        </div>
+      )}
+    </div>;
+  }
+
+  if (rankingSelecionado === "viralizacao") {
+    const compartilhamentos = valorNumero(post.shares);
+    const alcance = valorNumero(post.reach);
+    const interacoes = valorNumero(post.interacoes);
+    const taxaViralizacao = valorNumero(post.scoreViralizacao) * 100;
+    const taxaNaoQualificada =
+      post.metricasDesatualizadas || alcance < 500;
+
+    return <div style={resumoCompacto}>
+      <strong>🔥 Viralização: {formatarPercentual(taxaViralizacao)}</strong>
+      <div style={{ marginTop: "6px" }}>
+        ↗️ Shares: {numero(compartilhamentos)} {" | "}👀 Alcance: {numero(alcance)}
+      </div>
+      {taxaNaoQualificada && (
+        <div style={{ marginTop: "6px" }}>
+          Taxa não qualificada para ranking porque o alcance ficou abaixo de 500 ou as métricas estão incompletas.
+        </div>
+      )}
+    </div>;
+  }
+
+  return null;
+}
+
 // NOVO COMPONENTE: Exibe dados da Meta
-function TopContentCard({ post, ranking, onAnalisar, analisando }) {
+function TopContentCard({ post, ranking, onAnalisar, analisando, rankingSelecionado, totalConteudos }) {
   const permalinkSeguro = typeof post.permalink === "string" && post.permalink.startsWith("http");
   return (
     <div style={styles.postCard}>
       <h3 style={styles.postDay}>RANKING #{ranking}</h3>
 
       <div style={styles.postInfo}>
-        <p><strong>Tipo:</strong> {post.tipo || "POST"}</p>
+        <p><strong>Tipo:</strong> {normalizarFormatoInstagram(post.tipo)}</p>
         <p><strong>Data:</strong> {post.data || "-"}</p>
         <p><strong>Legenda:</strong> {post.legenda || "-"}</p>
       </div>
@@ -322,13 +545,19 @@ function TopContentCard({ post, ranking, onAnalisar, analisando }) {
             <div style={styles.cardMiniTagDark}>MÉTRICAS DO CONTEÚDO</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginTop: "12px", color: "#2d2d2d", fontSize: "14px" }}>
               <div><strong>👍 Likes:</strong> {post.likes}</div>
-              <div><strong>💬 Coments:</strong> {post.comments}</div>
-              <div><strong>↗️ Shares:</strong> {post.shares}</div>
-              <div><strong>💾 Saves:</strong> {post.saves}</div>
+              <div><strong>💬 Comentários:</strong> {post.comments}</div>
+              <div><strong>↗️ Compartilhamentos:</strong> {post.shares}</div>
+              <div><strong>💾 Salvamentos:</strong> {post.saves}</div>
+              <div><strong>▶️ Visualizações:</strong> {post.views || 0}</div>
               <div><strong>👀 Alcance:</strong> {post.reach || "-"}</div>
               <div><strong>🔥 Interações:</strong> {post.interacoes}</div>
               <div><strong>📈 Engajamento:</strong> {post.engajamento}{post.reach > 0 ? "%" : ""}</div>
             </div>
+            <ExplicacaoRankingTopConteudos post={post} rankingSelecionado={rankingSelecionado} ranking={ranking} totalConteudos={totalConteudos} />
+
+            {post.metricasDesatualizadas && (
+              <span style={styles.staleMetricsPill}>Métricas podem estar desatualizadas</span>
+            )}
           </div>
         </div>
 
@@ -437,7 +666,7 @@ function PromocaoPostCard({ post, index }) {
       </div>
 
       <div style={styles.postInfo}>
-        <p><strong>Formato:</strong> {post.tipo || "POST"}</p>
+        <p><strong>Formato:</strong> {normalizarFormatoInstagram(post.tipo)}</p>
         
         {/* Caixa de legenda com limitação de altura para evitar cards gigantes */}
         <div style={{ 
@@ -472,12 +701,12 @@ function PromocaoPostCard({ post, index }) {
             <div style={styles.cardMiniTagDark}>MÉTRICAS</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "12px", color: "#2d2d2d", fontSize: "13px" }}>
               <div><strong>👍 Likes:</strong> {post.likes}</div>
-              <div><strong>💬 Coments:</strong> {post.comments}</div>
-              <div><strong>↗️ Shares:</strong> {post.shares}</div>
-              <div><strong>💾 Saves:</strong> {post.saves}</div>
+              <div><strong>💬 Comentários:</strong> {post.comments}</div>
+              <div><strong>↗️ Compartilhamentos:</strong> {post.shares}</div>
+              <div><strong>💾 Salvamentos:</strong> {post.saves}</div>
               <div><strong>👀 Alcance:</strong> {post.reach}</div>
               <div><strong>📈 Engajamento:</strong> {post.engajamento}%</div>
-              <div><strong>🏆 Score Final:</strong> {post.score}</div>
+              <div><strong>🏆 Score:</strong> {post.score}</div>
             </div>
             
             {post.estimado && (
@@ -675,24 +904,27 @@ function InsightsPostCard({ post, index }) {
                 <span>Likes: <strong>{post.likes}</strong></span>
               </div>
               <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
-                <span>Comments: <strong>{post.comments}</strong></span>
+                <span>Comentários: <strong>{post.comments}</strong></span>
               </div>
               <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
-                <span>Shares: <strong>{post.shares}</strong></span>
+                <span>Compartilhamentos: <strong>{post.shares}</strong></span>
               </div>
               <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
-                <span>Saves: <strong>{post.saves}</strong></span>
+                <span>Salvamentos: <strong>{post.saves}</strong></span>
               </div>
               <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
-                <span>Reach: <strong>{post.reach}</strong></span>
+                <span>Alcance: <strong>{post.reach}</strong></span>
               </div>
               <div style={{ background: "#f8f9fa", padding: "4px", borderRadius: "4px", textAlign: "center", border: "1px solid #eee", fontSize: "11px" }}>
-                <span>Engaj: <strong>{post.engajamento}%</strong></span>
+                <span>Engajamento: <strong>{post.engajamento}%</strong></span>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "12px" }}>
               <div>Score: <strong style={{ color: "#ff6b1a" }}>{post.score}</strong></div>
               {post.estimado && <span style={{ background: "#ffeaa7", color: "#d63031", padding: "1px 4px", borderRadius: "4px", fontSize: "9px" }}>Estimadas</span>}
+              {post.metricasDesatualizadas && (
+                <span style={styles.staleMetricsPill}>Métricas podem estar desatualizadas</span>
+              )}
             </div>
           </div>
         </div>
@@ -715,8 +947,15 @@ export default function App() {
   const [data, setData] = useState(null);
   const [posts, setPosts] = useState([]);
   const [topConteudos, setTopConteudos] = useState([]);
+  const [topConteudosCache, setTopConteudosCache] = useState(null);
+  const [historicoTopConteudosCache, setHistoricoTopConteudosCache] = useState(null);
+  const [carregandoHistoricoTopConteudos, setCarregandoHistoricoTopConteudos] = useState(false);
+  const [abaTopConteudos, setAbaTopConteudos] = useState("performance");
+  const [periodoTopConteudos, setPeriodoTopConteudos] = useState("90d");
+  const [campanhaPromocaoVigente, setCampanhaPromocaoVigente] = useState("Campanha vigente do mês atual");
   const [promocaoVigentePosts, setPromocaoVigentePosts] = useState([]);
   const [insightsPosts, setInsightsPosts] = useState([]);
+  const [insightsCache, setInsightsCache] = useState(null);
   const [analisandoTop, setAnalisandoTop] = useState({});
   const [gerandoImagem, setGerandoImagem] = useState({});
 
@@ -758,7 +997,7 @@ export default function App() {
     const formatos = {
       VIDEO: { nome: "Reels", count: 0, scoreTotal: 0 },
       CAROUSEL_ALBUM: { nome: "Carrossel", count: 0, scoreTotal: 0 },
-      IMAGE: { nome: "Imagem Única", count: 0, scoreTotal: 0 }
+      IMAGE: { nome: "Imagem", count: 0, scoreTotal: 0 }
     };
     insightsPosts.forEach(p => {
       const tipo = p.tipo === "VIDEO" ? "VIDEO" : p.tipo === "CAROUSEL_ALBUM" ? "CAROUSEL_ALBUM" : "IMAGE";
@@ -773,11 +1012,51 @@ export default function App() {
     }));
   }, [insightsPosts]);
 
+  const topConteudosFiltrados = useMemo(
+    () => filtrarPostsPorPeriodo(topConteudos, periodoTopConteudos),
+    [topConteudos, periodoTopConteudos]
+  );
+
+  const rankingsTopConteudos = useMemo(
+    () => calcularRankingsTopConteudos(topConteudosFiltrados),
+    [topConteudosFiltrados]
+  );
+
+  const topConteudosRankingAtual = rankingsTopConteudos[abaTopConteudos] || [];
+
+  const subtituloRankingAtual = subtitulosRankingsTopConteudos[abaTopConteudos];
+
+  const totalConteudosAnalisados = periodoTopConteudos === "all" && historicoTopConteudosCache
+    ? historicoTopConteudosCache.totalCarregado
+    : topConteudosRankingAtual.length;
+
   async function chamarRota(rota) {
     setSelecionada(rota);
     setLoading(true);
     setErro("");
     setData(null);
+
+    if (
+      rota.id === "top" &&
+      topConteudosCache?.data &&
+      Date.now() - topConteudosCache.atualizadoEm < 5 * 60 * 1000
+    ) {
+      setData(topConteudosCache.data);
+      setTopConteudos(topConteudosCache.posts);
+      setLoading(false);
+      return;
+    }
+
+    if (
+      rota.id === "insights" &&
+      insightsCache?.data &&
+      Date.now() - insightsCache.atualizadoEm < 5 * 60 * 1000
+    ) {
+      setData(insightsCache.data);
+      setInsightsPosts(insightsCache.posts);
+      setLoading(false);
+      return;
+    }
 
     if (rota.id === "gerar-posts") {
       setPosts([]);
@@ -813,14 +1092,19 @@ export default function App() {
       if (rota.id === "top") {
         const lista = Array.isArray(json) ? json : json.topConteudos || [];
         setTopConteudos(lista);
+        setTopConteudosCache({ data: json, posts: lista, atualizadoEm: Date.now() });
       }
       if (rota.id === "promocao") {
         const lista = Array.isArray(json) ? json : json.promocaoVigente || [];
         setPromocaoVigentePosts(lista);
+        if (json.resumo?.campanhaVigente) {
+          setCampanhaPromocaoVigente(json.resumo.campanhaVigente);
+        }
       }
       if (rota.id === "insights") {
         const lista = Array.isArray(json) ? json : json.postsInsights || [];
         setInsightsPosts(lista);
+        setInsightsCache({ data: json, posts: lista, atualizadoEm: Date.now() });
       }
     } catch (e) {
       setErro(e.message || "Erro ao conectar com o servidor local.");
@@ -828,6 +1112,86 @@ export default function App() {
       setLoading(false);
     }
   }
+
+  async function carregarMetricasInstagramEmSegundoPlano() {
+    try {
+      const resposta = await fetch(`${API_BASE}/instagram-insights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apenasMetricas: true, limit: 25 }),
+      });
+
+      const json = await resposta.json();
+      if (!resposta.ok || json.success === false) return;
+
+      const lista = Array.isArray(json) ? json : json.postsInsights || [];
+      setInsightsPosts(lista);
+      setInsightsCache({ data: json, posts: lista, atualizadoEm: Date.now() });
+    } catch {
+      // Mantem os dados antigos do painel se a Meta API falhar.
+    }
+  }
+
+  async function carregarTopConteudosEmSegundoPlano() {
+    try {
+      const resposta = await fetch(`${API_BASE}/top-conteudos?limit=50`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const json = await resposta.json();
+      if (!resposta.ok || json.success === false) return;
+
+      const lista = Array.isArray(json) ? json : json.topConteudos || [];
+      setTopConteudos(lista);
+      setTopConteudosCache({ data: json, posts: lista, atualizadoEm: Date.now() });
+    } catch {
+      // Mantem os dados antigos do painel se a Meta API falhar.
+    }
+  }
+
+  async function selecionarPeriodoTopConteudos(periodoId) {
+    setPeriodoTopConteudos(periodoId);
+
+    if (periodoId !== "all") return;
+
+    if (historicoTopConteudosCache?.posts) {
+      setTopConteudos(historicoTopConteudosCache.posts);
+      return;
+    }
+
+    try {
+      setCarregandoHistoricoTopConteudos(true);
+      setErro("");
+
+      const resposta = await fetch(`${API_BASE}/top-conteudos?historico=all`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const json = await resposta.json();
+      if (!resposta.ok || json.success === false) {
+        throw new Error(json.erro || json.error || "Erro ao carregar histórico do Instagram.");
+      }
+
+      const lista = Array.isArray(json) ? json : json.topConteudos || [];
+      setTopConteudos(lista);
+      setHistoricoTopConteudosCache({
+        posts: lista,
+        totalCarregado: Number(json.totalCarregado) || lista.length,
+        limiteSegurancaAtingido: json.limiteSegurancaAtingido === true,
+      });
+    } catch (error) {
+      setErro(error.message || "Erro ao carregar todo o histórico.");
+    } finally {
+      setCarregandoHistoricoTopConteudos(false);
+    }
+  }
+
+  useEffect(() => {
+    carregarTopConteudosEmSegundoPlano();
+    carregarMetricasInstagramEmSegundoPlano();
+  }, []);
 
   async function gerarImagemIA(index, prompt) {
     try {
@@ -857,9 +1221,9 @@ export default function App() {
     }
   }
 
-  async function analisarConteudo(index, post) {
+  async function analisarConteudo(chaveAnalise, post) {
     try {
-      setAnalisandoTop((prev) => ({ ...prev, [index]: true }));
+      setAnalisandoTop((prev) => ({ ...prev, [chaveAnalise]: true }));
 
       const resposta = await fetch(`${API_BASE}/analisar-conteudo-top`, {
         method: "POST",
@@ -874,14 +1238,14 @@ export default function App() {
       }
 
       setTopConteudos((prev) =>
-        prev.map((p, i) =>
-          i === index ? { ...p, analiseIA: json.analise } : p
+        prev.map((p) =>
+          p.id === post.id ? { ...p, analiseIA: json.analise } : p
         )
       );
     } catch (e) {
       alert(e.message || "Erro ao analisar conteúdo.");
     } finally {
-      setAnalisandoTop((prev) => ({ ...prev, [index]: false }));
+      setAnalisandoTop((prev) => ({ ...prev, [chaveAnalise]: false }));
     }
   }
 
@@ -908,6 +1272,9 @@ export default function App() {
 
             {rotas.map((rota) => {
               const ativo = selecionada.id === rota.id;
+              const subtituloRota = rota.id === "promocao"
+                ? campanhaPromocaoVigente
+                : rota.subtitulo;
 
               return (
                 <button
@@ -919,7 +1286,7 @@ export default function App() {
                   }}
                 >
                   <span style={styles.menuTitle}>{rota.titulo}</span>
-                  <span style={styles.menuSubtitle}>{rota.subtitulo}</span>
+                  <span style={styles.menuSubtitle}>{subtituloRota}</span>
                 </button>
               );
             })}
@@ -946,7 +1313,7 @@ export default function App() {
               </div>
 
               <div style={styles.statCard}>
-                <span style={styles.statLabel}>Shares</span>
+                <span style={styles.statLabel}>SHARES</span>
                 <strong style={styles.statNumber}>{numero(metricas.compartilhamentos)}</strong>
                 <small style={styles.statText}>compartilhamentos</small>
               </div>
@@ -957,7 +1324,9 @@ export default function App() {
                 <div style={{ minWidth: 0 }}>
                   <span style={styles.sectionTag}>ANÁLISE ATUAL</span>
                   <h2 style={styles.panelTitle}>{selecionada.titulo}</h2>
-                  <p style={styles.panelSubtitle}>{selecionada.subtitulo}</p>
+                  <p style={styles.panelSubtitle}>
+                    {selecionada.id === "promocao" ? campanhaPromocaoVigente : selecionada.subtitulo}
+                  </p>
                 </div>
 
                 <button
@@ -1008,16 +1377,91 @@ export default function App() {
               )}
 
               {selecionada.id === "top" && topConteudos.length > 0 && !loading && (
-                <div style={styles.postsGrid}>
-                  {topConteudos.map((post, index) => (
-                    <TopContentCard 
-                      key={index} 
-                      post={post} 
-                      ranking={index + 1} 
-                      onAnalisar={() => analisarConteudo(index, post)}
-                      analisando={!!analisandoTop[index]}
-                    />
-                  ))}
+                <div style={styles.topDecisionArea}>
+                  <div style={styles.topFiltersRow}>
+                    <div style={styles.segmentedControl}>
+                      {abasTopConteudos.map((aba) => (
+                        <button
+                          key={aba.id}
+                          onClick={() => setAbaTopConteudos(aba.id)}
+                          style={{
+                            ...styles.segmentedButton,
+                            ...(abaTopConteudos === aba.id ? styles.segmentedButtonActive : {}),
+                          }}
+                        >
+                          {aba.titulo}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div style={styles.segmentedControl}>
+                      {periodosTopConteudos.map((periodo) => (
+                        <button
+                          key={periodo.id}
+                          onClick={() => selecionarPeriodoTopConteudos(periodo.id)}
+                          style={{
+                            ...styles.segmentedButton,
+                            ...(periodoTopConteudos === periodo.id ? styles.segmentedButtonActive : {}),
+                          }}
+                        >
+                          {periodo.titulo}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p style={{ margin: 0, color: "#666666", fontSize: "13px", fontWeight: 700 }}>
+                    {totalConteudosAnalisados} conteúdos analisados
+                  </p>
+
+                  {subtituloRankingAtual && (
+                    <p style={{
+                      margin: 0,
+                      color: "#5f4b00",
+                      background: "#fff8dc",
+                      border: "1px solid #f1d77c",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                    }}>
+                      {subtituloRankingAtual}
+                    </p>
+                  )}
+
+                  {carregandoHistoricoTopConteudos ? (
+                    <div style={styles.emptyBox}>
+                      <h3>Carregando todo o histórico...</h3>
+                      <p>Buscando e paginando os conteúdos disponíveis do perfil. Isso pode levar alguns instantes.</p>
+                    </div>
+                  ) : topConteudosRankingAtual.length === 0 ? (
+                    <div style={styles.emptyBox}>
+                      <h3>Nenhum conteúdo no período selecionado</h3>
+                      <p>Escolha outro período para recalcular o ranking sobre os posts carregados.</p>
+                    </div>
+                  ) : (
+                    <div style={styles.postsGrid}>
+                      {topConteudosRankingAtual.map((post, index) => {
+                        const chaveAnalise = post.id || `${abaTopConteudos}-${index}`;
+
+                        return (
+                          <TopContentCard
+                            key={`${abaTopConteudos}-${post.id || index}`}
+                            post={post}
+                            ranking={index + 1}
+                            rankingSelecionado={abaTopConteudos}
+                            totalConteudos={totalConteudosAnalisados}
+                            onAnalisar={() => analisarConteudo(chaveAnalise, post)}
+                            analisando={!!analisandoTop[chaveAnalise]}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {periodoTopConteudos === "all" && historicoTopConteudosCache?.limiteSegurancaAtingido && (
+                    <p style={styles.panelSubtitle}>
+                      O histórico atingiu o limite de segurança de 5.000 conteúdos carregados.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1097,7 +1541,7 @@ export default function App() {
                           <small style={{ color: "rgba(255,255,255,0.6)" }}>Engajamento geral</small>
                         </div>
                         <div>
-                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Total Compartilhamentos / Saves</span>
+                          <span style={{ fontSize: "11px", color: "#ff8a3d", fontWeight: "bold", textTransform: "uppercase" }}>Total Compartilhamentos / Salvamentos</span>
                           <h4 style={{ margin: "4px 0", fontSize: "20px", fontWeight: "900" }}>{resumoMetradasAvancado?.totalShares} / {resumoMetradasAvancado?.totalSaves}</h4>
                           <small style={{ color: "rgba(255,255,255,0.6)" }}>Interações orgânicas</small>
                         </div>
@@ -1119,10 +1563,10 @@ export default function App() {
                               <strong style={{ color: "#d4af37" }}>🏆 Melhor Post:</strong> {data.resumo.melhorPost}
                             </div>
                             <div>
-                              <strong style={{ color: "#fd79a8" }}>💾 Mais Salvo:</strong> {resumoMetradasAvancado?.postMaisSalvo} ({resumoMetradasAvancado?.maxSavesCount} saves)
+                              <strong style={{ color: "#fd79a8" }}>💾 Mais Salvo:</strong> {resumoMetradasAvancado?.postMaisSalvo} ({resumoMetradasAvancado?.maxSavesCount} salvamentos)
                             </div>
                             <div>
-                              <strong style={{ color: "#0984e3" }}>↗️ Mais Compartilhado:</strong> {resumoMetradasAvancado?.postMaisCompartilhado} ({resumoMetradasAvancado?.maxSharesCount} shares)
+                              <strong style={{ color: "#0984e3" }}>↗️ Mais Compartilhado:</strong> {resumoMetradasAvancado?.postMaisCompartilhado} ({resumoMetradasAvancado?.maxSharesCount} compartilhamentos)
                             </div>
                           </div>
                         </div>
@@ -1437,6 +1881,15 @@ const styles = {
     cursor: "not-allowed",
   },
 
+  staleMetricsPill: {
+    background: "#fff3cd",
+    color: "#8a5a00",
+    padding: "2px 6px",
+    borderRadius: "4px",
+    fontSize: "9px",
+    fontWeight: 800,
+  },
+
   emptyBox: {
     background: "#ffffff",
     border: "1px dashed #cccccc",
@@ -1473,6 +1926,41 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 22,
+  },
+
+  topDecisionArea: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 18,
+  },
+
+  topFiltersRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+
+  segmentedControl: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  segmentedButton: {
+    background: "#ffffff",
+    color: "#333333",
+    border: "1px solid #d8d8d8",
+    borderRadius: 10,
+    padding: "8px 12px",
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  segmentedButtonActive: {
+    background: "#ff6b1a",
+    borderColor: "#ff6b1a",
+    color: "#ffffff",
   },
 
   postCard: {
