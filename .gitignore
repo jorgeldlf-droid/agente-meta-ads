@@ -10,3 +10,20 @@ node_modules
 node_modules/.bin/openai
 
 dist
+# catalogo-service: arquivos gerados automaticamente
+catalogo-service/output/
+catalogo-service/output/**
+catalogo-service/output/temp/
+
+catalogo-service/logs/
+catalogo-service/logs/**
+
+catalogo-service/catalogo-service/output/
+catalogo-service/catalogo-service/output/**
+catalogo-service/catalogo-service/output/temp/
+
+catalogo-service/catalogo-service/logs/
+catalogo-service/catalogo-service/logs/**
+
+catalogo-service/cache/
+catalogo-service/catalogo-service/cache/
