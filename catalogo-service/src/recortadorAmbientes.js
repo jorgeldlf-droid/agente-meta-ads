@@ -3,6 +3,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { getAmbientesCatalogoDir } from './config/caminhos.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), 'catalogo-service/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -672,7 +673,7 @@ Se não houver nenhum ambiente real decorado na página, retorne:
 export async function recortarAmbientes(caminhoImagemLocal, ambientes, outputDirName) {
   if (!ambientes || ambientes.length === 0) return [];
 
-  const outputDir = path.resolve(`catalogo-service/output/ambientes/${outputDirName}`);
+  const outputDir = getAmbientesCatalogoDir(outputDirName);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }

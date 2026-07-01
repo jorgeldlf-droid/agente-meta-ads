@@ -2,6 +2,7 @@ import { createCanvas } from '@napi-rs/canvas';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import fs from 'fs';
 import path from 'path';
+import { getPaginasCatalogoDir } from './config/caminhos.js';
 
 /**
  * Renderiza paginas do PDF como imagens locais PNG usando pdfjs-dist e @napi-rs/canvas
@@ -12,7 +13,7 @@ import path from 'path';
  * @returns {Promise<Array>} Lista de metadados das paginas renderizadas
  */
 export async function renderizarPaginasPdf(pdfPath, outputDirName, limitePaginas = 3) {
-  const outputDir = path.resolve(`catalogo-service/output/paginas/${outputDirName}`);
+  const outputDir = getPaginasCatalogoDir(outputDirName);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
