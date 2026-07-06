@@ -5,7 +5,11 @@ import OpenAI from "openai";
 import path from "path";
 import { sincronizarCatalogosStorage } from "./catalogo-service/src/sincronizarCatalogosStorage.js";
 import { importarPdfsSincronizados } from "./catalogo-service/src/importarPdfsSincronizados.js";
-import { REGISTRO_FORNECEDORES } from "./catalogo-service/src/registroFornecedores.js";
+import {
+  REGISTRO_FORNECEDORES,
+  listarNomesFornecedores,
+  obterFornecedorPelaUrlImagem,
+} from "./catalogo-service/src/registroFornecedores.js";
 
 dotenv.config();
 dotenv.config({ path: path.resolve(process.cwd(), 'catalogo-service/.env') });
@@ -211,16 +215,7 @@ function removerMarcasConflitantes(texto = "", fornecedorEscolhido) {
 }
 
 function obterFornecedorDaImagemBanco(url = "") {
-  const lower = String(url || "").toLowerCase();
-  const fornecedoresOrdenados = [...fornecedoresGerarPosts].sort((a, b) => {
-    const slugA = obterSlugStorageFornecedor(a) || "";
-    const slugB = obterSlugStorageFornecedor(b) || "";
-    return slugB.length - slugA.length;
-  });
-  return fornecedoresOrdenados.find((fornecedor) => {
-    const slug = obterSlugStorageFornecedor(fornecedor);
-    return slug && lower.includes(`/${slug}/`);
-  }) || null;
+  return obterFornecedorPelaUrlImagem(url)?.nome || null;
 }
 
 function ambienteCombinaTema(ambiente, textoBusca = "", eTemaExterno = false) {
@@ -1484,6 +1479,17 @@ async function obterProdutosValidadosBanco(fornecedoresPermitidos = fornecedores
   }
 }
 
+function escolherFornecedorFallbackGerarPosts(ambientesPrioritarios = []) {
+  if (ambientesPrioritarios.length > 0) {
+    const escolhido = ambientesPrioritarios[
+      Math.floor(Math.random() * ambientesPrioritarios.length)
+    ];
+    return escolhido.fornecedor;
+  }
+
+  return listarNomesFornecedores()[0] || "Geral";
+}
+
 async function gerarPostsHandler(req, res) {
   try {
     const { textoContexto: contextoBanco, ambientesDb } = await obterProdutosValidadosBanco(fornecedoresGerarPosts);
@@ -1567,6 +1573,7 @@ MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
 0.2. Use os ambientes oficiais prioritários acima como ponto de partida: primeiro produto/imagem real, depois tema, gancho, legenda e CTA.
 0.3. Use o campo "Uso/acabamento interpretado" para adequar a promessa do post: externo, interno, polido, natural, acetinado ou antiderrapante.
 0.4. Não repita a mesma URL de imagem oficial em posts diferentes.
+0.5. Quando houver ambientes oficiais disponíveis, prefira fornecedores diferentes dentro do mesmo lote de geração.
 1. Para fornecedores que possuem "Ambientes Oficiais/Validados" listados no contexto acima:
    - Crie posts comerciais focados EXCLUSIVAMENTE em um desses ambientes reais do banco.
    - Use exatamente o nome/descrição real fornecido no contexto.
@@ -1574,7 +1581,7 @@ MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
    - Coloque no campo "promptImagem" a exata "URL da Imagem Oficial" fornecida para o ambiente correspondente. Isso garantirá consistência perfeita!
 2. Para fornecedores que NÃO possuem produtos ou ambientes validados no contexto:
    - Você está terminantemente PROIBIDO de citar qualquer nome de modelo técnico, coleção fictícia, formato (medida) ou acabamento (como "Urban Acetinado", "60x120").
-   - Crie posts de INSPIRAÇÃO GENÉRICA e de tendências de design de interiores associadas a essa marca (ex: "A elegância dos porcelanatos Ceusa", "Como paginar ambientes com Ceusa").
+   - Crie posts de INSPIRAÇÃO GENÉRICA e de tendências de design de interiores associadas a essa marca (ex: "A elegância dos porcelanatos da coleção escolhida", "Como valorizar ambientes utilizando a coleção do fornecedor").
    - Nesses posts genéricos, deixe o campo "promptImagem" em branco ou descreva um prompt abstrato e marque a "imagemOficial" como null.
 
 Defina categoriaEstrategica como "Fornecedor".
@@ -1637,13 +1644,16 @@ ${baseSchema}`;
            tema: fallbackDerivados[posts.length % fallbackDerivados.length].tema + " (Bônus Campeão)"
         });
       } else {
+        const fornecedorFallback = escolherFornecedorFallbackGerarPosts(
+          ambientesPrioritariosFornecedor
+        );
         posts.push({
           categoriaEstrategica: "Derivado Campeão",
           tema: "Destaque Porcelanato Premium",
           gancho: "Aproveite a campanha Exterminador do Prejuízo",
           legenda: "Renove seu ambiente com nossas coleções premium. Chame no WhatsApp!",
           cta: "Visite a Porcelanato Shop",
-          fornecedor: "Portinari",
+          fornecedor: fornecedorFallback,
           promptImagem: "Porcelanato premium em ambiente moderno, alta resolução",
           scoreComercial: 85
         });
