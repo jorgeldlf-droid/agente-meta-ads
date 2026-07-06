@@ -4,6 +4,9 @@ import { renderizarPaginasPdf } from './renderizadorPaginas.js';
 import { detectarAmbientesNaPagina, recortarAmbientes } from './recortadorAmbientes.js';
 import { uploadParaStorage } from './uploaderStorage.js';
 import { supabase } from './supabaseClient.js';
+import { LOGS_DIR } from './config/caminhos.js';
+import { limparCatalogoExistente } from './limparCatalogoExistente.js';
+import { gerarPastaSaidaSlug } from './gerarPastaSaidaSlug.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -20,18 +23,91 @@ const MAPA_FORNECEDORES = {
   eliane: {
     nome: 'Eliane',
     site: 'https://www.eliane.com'
+  },
+  elizabeth: {
+    nome: 'Elizabeth',
+    site: 'https://www.grupoelizabeth.com.br'
+  },
+  embramaco: {
+    nome: 'Embramaco',
+    site: 'https://www.embramaco.com.br'
+  },
+  roca: {
+    nome: 'Roca',
+    site: 'https://www.roca.com.br'
+  },
+  incepa: {
+    nome: 'Incepa',
+    site: 'https://www.incepa.com.br'
+  },
+  delta: {
+    nome: 'Delta',
+    site: 'https://www.deltaceramica.com.br'
+  },
+  'delta-nova': {
+    nome: 'Delta Nova',
+    site: 'https://www.deltaceramica.com.br'
   }
 };
+
+function normalizarFornecedorArg(valor = '') {
+  return String(valor || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\s]+/g, '-');
+}
+
+function obterFornecedorArg(args = []) {
+  const fornecedorFlag = args.find((arg) => arg.startsWith('--fornecedor='));
+  if (fornecedorFlag) {
+    return fornecedorFlag.split('=').slice(1).join('=');
+  }
+
+  const fornecedorIndex = args.findIndex((arg) => arg === '--fornecedor' || arg === '-f');
+  if (fornecedorIndex >= 0 && args[fornecedorIndex + 1]) {
+    return args[fornecedorIndex + 1];
+  }
+
+  return args.find((arg) => !arg.startsWith('-')) || 'portinari';
+}
+
+function obterPdfArg(args = []) {
+  const pdfFlag = args.find((arg) => arg.startsWith('--pdf='));
+  if (pdfFlag) {
+    return pdfFlag.split('=').slice(1).join('=').trim();
+  }
+
+  const pdfIndex = args.findIndex((arg) => arg === '--pdf');
+  if (pdfIndex >= 0 && args[pdfIndex + 1]) {
+    return args[pdfIndex + 1].trim();
+  }
+
+  return null;
+}
+
+function selecionarPdf(catalogos, nomePdfArg) {
+  if (!nomePdfArg) {
+    return catalogos[0];
+  }
+
+  const encontrado = catalogos.find((item) => item.name === nomePdfArg)
+    || catalogos.find((item) => item.name.toLowerCase() === nomePdfArg.toLowerCase());
+
+  return encontrado || null;
+}
 
 async function iniciarImportador() {
   console.log('🚀 === INICIANDO IMPORTADOR DE CATÁLOGOS UNIVERSAL (FASE 2) ===');
   
   const args = process.argv.slice(2);
-  const fornecedorArg = (args[0] || 'portinari').toLowerCase();
+  const fornecedorArg = normalizarFornecedorArg(obterFornecedorArg(args));
+  const pdfArg = obterPdfArg(args);
   
   const config = MAPA_FORNECEDORES[fornecedorArg];
   if (!config) {
-    console.error(`❌ Erro: Fornecedor '${fornecedorArg}' inválido! Use 'portinari', 'ceusa' ou 'eliane'.`);
+    console.error(`Fornecedor '${fornecedorArg}' invalido. Use um destes: ${Object.keys(MAPA_FORNECEDORES).join(', ')}.`);
     process.exit(1);
   }
   
@@ -42,8 +118,9 @@ async function iniciarImportador() {
   const MAX_PAGINAS_TESTE = 50;
   const MAX_RECORTES_TESTE = 100;
   const MAX_RECORTES_POR_PAGINA = 3;
+  const DELAY_ENTRE_PAGINAS_MS = 3000;
   
-  const logsDir = path.resolve('catalogo-service/logs');
+  const logsDir = LOGS_DIR;
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
   }
@@ -74,16 +151,31 @@ async function iniciarImportador() {
   try {
     const catalogos = await listarCatalogos(FORNECEDOR_SLUG);
     if (catalogos.length === 0) {
-      const msg = `⚠️ Nenhum PDF de tamanho válido encontrado em ${FORNECEDOR_SLUG}/catalogos no Storage.`;
+      const msg = `⚠️ Nenhum PDF de tamanho válido encontrado nas pastas de catálogo de ${FORNECEDOR_SLUG} no Storage.`;
       console.log(msg);
       logExecucao.falhas.push(msg);
       salvarLogLocal(logExecucao, logsDir, FORNECEDOR_SLUG);
       return;
     }
     
-    const pdfEscolhido = catalogos[0];
+    const pdfEscolhido = selecionarPdf(catalogos, pdfArg);
+
+    if (!pdfEscolhido) {
+      const nomesDisponiveis = catalogos.map((item) => item.name).join(', ');
+      const msg = pdfArg
+        ? `❌ PDF "${pdfArg}" não encontrado no Storage de ${FORNECEDOR_SLUG}. PDFs disponíveis: ${nomesDisponiveis}`
+        : `⚠️ Nenhum PDF selecionado para ${FORNECEDOR_SLUG}.`;
+      console.error(msg);
+      logExecucao.falhas.push(msg);
+      salvarLogLocal(logExecucao, logsDir, FORNECEDOR_SLUG);
+      process.exit(1);
+    }
+
     logExecucao.pdf_utilizado = pdfEscolhido.name;
-    console.log(`🎯 PDF Selecionado para a marca ${FORNECEDOR_NOME}: "${pdfEscolhido.name}"`);
+    console.log(
+      `🎯 PDF Selecionado para a marca ${FORNECEDOR_NOME}: "${pdfEscolhido.name}"` +
+      (pdfArg ? ' (via --pdf)' : ' (primeiro da lista)')
+    );
     
     console.log(`🗄️ Verificando/Criando fornecedor ${FORNECEDOR_NOME} no banco...`);
     let fornecedorId;
@@ -123,8 +215,8 @@ async function iniciarImportador() {
     }
 
     const nomeCatalogo = path.basename(pdfEscolhido.name, '.pdf');
+    const pastaSaidaSlug = gerarPastaSaidaSlug(nomeCatalogo);
     console.log(`🗄️ Verificando/Criando catálogo "${nomeCatalogo}" no banco de dados...`);
-    let catalogoId;
 
     const { data: catalogosEncontrados, error: errCat } = await supabase
       .from('catalogos')
@@ -138,14 +230,37 @@ async function iniciarImportador() {
       throw errCat;
     }
 
-    if (catalogosEncontrados && catalogosEncontrados.length > 0) {
-      catalogoId = catalogosEncontrados[0].id;
-      console.log(`✅ Catálogo encontrado! ID: ${catalogoId}`);
+    const catalogoJaExistia = catalogosEncontrados && catalogosEncontrados.length > 0;
+
+    if (catalogoJaExistia) {
+      const catalogoExistenteId = catalogosEncontrados[0].id;
+      console.log(`✅ Catálogo existente encontrado! ID: ${catalogoExistenteId}`);
+      console.log('🧹 Limpando dados antigos antes da reimportação...');
+
+      try {
+        await limparCatalogoExistente({
+          catalogoId: catalogoExistenteId,
+          fornecedorSlug: FORNECEDOR_SLUG,
+          nomeCatalogo,
+          pastaSaidaSlug,
+        });
+      } catch (errorLimpeza) {
+        const msg = `Falha na limpeza do catálogo existente: ${errorLimpeza.message}`;
+        console.error(`❌ ${msg}`);
+        logExecucao.falhas.push(msg);
+        throw errorLimpeza;
+      }
+
+      console.log('✅ Limpeza concluída.');
+      console.log('➕ Recriando catálogo...');
+      console.log('🔄 Iniciando reimportação...');
     } else {
       console.log(`➕ Cadastrando catálogo no banco de dados...`);
-      const { data: novoCat, error: errCadCat } = await supabase
-        .from('catalogos')
-        .insert({
+    }
+
+    const { data: novoCat, error: errCadCat } = await supabase
+      .from('catalogos')
+      .insert({
           fornecedor_id: fornecedorId,
           nome: nomeCatalogo,
           ano: 2026,
@@ -155,26 +270,25 @@ async function iniciarImportador() {
         .select('id')
         .single();
 
-      if (errCadCat) {
-        console.error('❌ Erro ao cadastrar catálogo:', errCadCat.message);
-        logExecucao.falhas.push(`Erro ao cadastrar catálogo: ${errCadCat.message}`);
-        throw errCadCat;
-      }
-      catalogoId = novoCat.id;
-      console.log(`✅ Catálogo cadastrado com ID: ${catalogoId}`);
+    if (errCadCat) {
+      console.error('❌ Erro ao cadastrar catálogo:', errCadCat.message);
+      logExecucao.falhas.push(`Erro ao cadastrar catálogo: ${errCadCat.message}`);
+      throw errCadCat;
     }
 
-    const localPdfPath = await baixarPdfLocal(FORNECEDOR_SLUG, pdfEscolhido.name);
+    const catalogoId = novoCat.id;
+    console.log(`✅ Catálogo cadastrado com ID: ${catalogoId}`);
+
+    const localPdfPath = await baixarPdfLocal(FORNECEDOR_SLUG, pdfEscolhido);
     
-    const pastaSaidaSlug = nomeCatalogo.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const paginasRenderizadas = await renderizarPaginasPdf(localPdfPath, pastaSaidaSlug, MAX_PAGINAS_TESTE);
 
     let totalRecortesRealizados = 0;
 
     for (const pag of paginasRenderizadas) {
       if (pag.numero > 1) {
-        console.log('⏱️ Aguardando 1 segundo para rate limit...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log(`⏱️ Aguardando ${DELAY_ENTRE_PAGINAS_MS / 1000} segundos para rate limit...`);
+        await new Promise(resolve => setTimeout(resolve, DELAY_ENTRE_PAGINAS_MS));
       }
 
       console.log(`\n📄 --- Processando Página ${pag.numero}/${paginasRenderizadas.length} ---`);
@@ -327,3 +441,4 @@ function salvarLogLocal(logObj, logsDir, slug) {
 }
 
 iniciarImportador();
+

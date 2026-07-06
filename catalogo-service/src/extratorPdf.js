@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 import fs from 'fs';
-import path from 'path';
+import { BUCKET_CATALOGOS, montarCaminhoStorage } from './storagePastas.js';
+import { TEMP_DIR, getTempPdfPath } from './config/caminhos.js';
 
 /**
  * Faz o download de um PDF do Supabase Storage para processamento local
@@ -8,19 +9,22 @@ import path from 'path';
  * @param {string} filename - Nome do arquivo PDF no storage
  * @returns {Promise<string>} Caminho local do PDF baixado
  */
-export async function baixarPdfLocal(fornecedor, filename) {
-  const remotePath = `${fornecedor}/catalogos/${filename}`;
-  const localDir = path.resolve('catalogo-service/output/temp');
+export async function baixarPdfLocal(fornecedor, arquivoPdf) {
+  const filename = typeof arquivoPdf === 'string' ? arquivoPdf : arquivoPdf.name;
+  const remotePath = typeof arquivoPdf === 'object' && arquivoPdf.caminhoStorage
+    ? arquivoPdf.caminhoStorage
+    : await montarCaminhoStorage(supabase, fornecedor, 'catalogos', filename);
+  const localDir = TEMP_DIR;
   
   if (!fs.existsSync(localDir)) {
     fs.mkdirSync(localDir, { recursive: true });
   }
   
-  const localPath = path.join(localDir, filename);
+  const localPath = getTempPdfPath(filename);
   console.log(`📥 Baixando arquivo do Supabase Storage: "${remotePath}" para "${localPath}"...`);
 
   const { data, error } = await supabase.storage
-    .from('catalogos-oficiais')
+    .from(BUCKET_CATALOGOS)
     .download(remotePath);
 
   if (error) {

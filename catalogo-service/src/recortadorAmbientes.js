@@ -39,6 +39,92 @@ const MIN_INDICADORES_FICHA_TECNICA = 3;
 const GANHO_MINIMO_SCORE_LAYOUT_DIVIDIDO = 0.15;
 const TOLERANCIA_SCORE_LAYOUT_DIVIDIDO = 0.05;
 
+const TENTATIVAS_ABERTURA_ARQUIVO = 3;
+const DELAY_RETRY_ABERTURA_MS = 500;
+const TENTATIVAS_OPENAI_VISION = 5;
+const DELAY_RETRY_OPENAI_BASE_MS = 2000;
+const DELAY_RETRY_OPENAI_MAX_MS = 60000;
+const BUFFER_DELAY_OPENAI_MS = 100;
+const INTERVALO_MINIMO_OPENAI_VISION_MS = 5000;
+let ultimaChamadaOpenAIVisionMs = 0;
+
+async function aguardar(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function executarComRetryAbertura(acao) {
+  for (let tentativa = 1; tentativa <= TENTATIVAS_ABERTURA_ARQUIVO; tentativa++) {
+    try {
+      return await acao();
+    } catch (error) {
+      if (tentativa === TENTATIVAS_ABERTURA_ARQUIVO) throw error;
+      await aguardar(DELAY_RETRY_ABERTURA_MS);
+    }
+  }
+}
+
+function isErroRateLimitOpenAI(error) {
+  const status = error?.status;
+  const code = error?.code;
+  const mensagem = String(error?.message || '');
+  return status === 429
+    || code === 'rate_limit_exceeded'
+    || mensagem.includes('429')
+    || /rate limit reached/i.test(mensagem);
+}
+
+function extrairDelayRetryOpenAIMs(error) {
+  const mensagem = String(error?.message || '');
+  const match = mensagem.match(/try again in ([\d.]+)\s*(ms|s)\b/i);
+  if (!match) return null;
+
+  const valor = parseFloat(match[1]);
+  if (Number.isNaN(valor)) return null;
+
+  const ms = match[2].toLowerCase() === 's' ? valor * 1000 : valor;
+  return Math.ceil(ms) + BUFFER_DELAY_OPENAI_MS;
+}
+
+async function executarComRetryOpenAI(acao, contexto = 'OpenAI Vision') {
+  for (let tentativa = 1; tentativa <= TENTATIVAS_OPENAI_VISION; tentativa++) {
+    try {
+      return await acao();
+    } catch (error) {
+      const ehRateLimit = isErroRateLimitOpenAI(error);
+      const esgotouTentativas = tentativa === TENTATIVAS_OPENAI_VISION;
+
+      if (!ehRateLimit || esgotouTentativas) {
+        throw error;
+      }
+
+      const delayApi = extrairDelayRetryOpenAIMs(error);
+      const backoffExponencial = DELAY_RETRY_OPENAI_BASE_MS * Math.pow(2, tentativa - 1);
+      const delay = Math.min(
+        delayApi ? Math.max(delayApi, backoffExponencial) : backoffExponencial,
+        DELAY_RETRY_OPENAI_MAX_MS
+      );
+
+      console.warn(
+        `⚠️ [${contexto}] Rate limit 429 (tentativa ${tentativa}/${TENTATIVAS_OPENAI_VISION}). Aguardando ${delay}ms...`
+      );
+      await aguardar(delay);
+    }
+  }
+}
+
+async function aguardarIntervaloMinimoOpenAIVision() {
+  const agora = Date.now();
+  const decorrido = agora - ultimaChamadaOpenAIVisionMs;
+  const restante = INTERVALO_MINIMO_OPENAI_VISION_MS - decorrido;
+
+  if (ultimaChamadaOpenAIVisionMs > 0 && restante > 0) {
+    console.log(`⏳ [IA Vision] Aguardando ${restante}ms para respeitar intervalo mínimo...`);
+    await aguardar(restante);
+  }
+
+  ultimaChamadaOpenAIVisionMs = Date.now();
+}
+
 function limitarValor(valor, minimo, maximo) {
   return Math.min(Math.max(valor, minimo), maximo);
 }
@@ -582,7 +668,9 @@ export async function detectarAmbientesNaPagina(caminhoImagemLocal) {
   }
 
   try {
-    const imagemBase64 = fs.readFileSync(caminhoImagemLocal).toString('base64');
+    const imagemBase64 = (await executarComRetryAbertura(() =>
+      fs.readFileSync(caminhoImagemLocal)
+    )).toString('base64');
     
     const prompt = `
 Você é um sistema especializado em processamento visual de catálogos de revestimentos/porcelanatos.
@@ -620,25 +708,30 @@ Se não houver nenhum ambiente real decorado na página, retorne:
 }
 `;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/png;base64,${imagemBase64}`
+    await aguardarIntervaloMinimoOpenAIVision();
+
+    const response = await executarComRetryOpenAI(
+      () => openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:image/png;base64,${imagemBase64}`
+                }
               }
-            }
-          ]
-        }
-      ],
-      temperature: 0.1,
-      response_format: { type: 'json_object' }
-    });
+            ]
+          }
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      }),
+      'IA Vision'
+    );
 
     const content = response.choices[0].message.content.trim();
     
@@ -682,7 +775,9 @@ export async function recortarAmbientes(caminhoImagemLocal, ambientes, outputDir
   
   try {
     // Carrega a imagem original usando loadImage do @napi-rs/canvas
-    const image = await loadImage(caminhoImagemLocal);
+    const image = await executarComRetryAbertura(() =>
+      loadImage(caminhoImagemLocal)
+    );
     const width = image.width;
     const height = image.height;
 

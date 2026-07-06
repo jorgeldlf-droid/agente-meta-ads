@@ -1,7 +1,8 @@
 import { supabase } from './supabaseClient.js';
+import { BUCKET_CATALOGOS, montarCaminhoStorage } from './storagePastas.js';
 
 /**
- * Lista os PDFs disponiveis no bucket 'catalogos-oficiais' sob a pasta '{fornecedor}/catalogos'
+ * Lista os PDFs disponiveis no bucket de catalogos sob a pasta real do fornecedor.
  * Adiciona protecao para ignorar PDFs maiores que 150 MB.
  * 
  * @param {string} fornecedor - Nome do fornecedor (ex: 'portinari')
@@ -12,11 +13,11 @@ export async function listarCatalogos(fornecedor = 'portinari') {
     throw new Error('Supabase Client nao inicializado. Verifique as credenciais no arquivo catalogo-service/.env');
   }
 
-  const folder = `${fornecedor}/catalogos`;
-  console.log(`🔍 Listando PDFs no Supabase Storage: bucket "catalogos-oficiais", pasta "${folder}"...`);
+  const folder = await montarCaminhoStorage(supabase, fornecedor, 'catalogos');
+  console.log(`Listando PDFs no Supabase Storage: bucket "${BUCKET_CATALOGOS}", pasta "${folder}"...`);
   
   const { data, error } = await supabase.storage
-    .from('catalogos-oficiais')
+    .from(BUCKET_CATALOGOS)
     .list(folder, {
       limit: 50,
       sortBy: { column: 'name', order: 'asc' }
@@ -46,9 +47,14 @@ export async function listarCatalogos(fornecedor = 'portinari') {
       continue;
     }
     
-    pdfsValidos.push(file);
+    pdfsValidos.push({
+      ...file,
+      pastaStorage: folder,
+      caminhoStorage: `${folder}/${file.name}`
+    });
   }
   
   console.log(`✨ Encontrados ${pdfsValidos.length} arquivo(s) PDF de tamanho valido (≤ ${LIMITE_MB} MB).`);
   return pdfsValidos;
 }
+

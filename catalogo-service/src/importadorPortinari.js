@@ -4,6 +4,7 @@ import { renderizarPaginasPdf } from './renderizadorPaginas.js';
 import { detectarAmbientesNaPagina, recortarAmbientes } from './recortadorAmbientes.js';
 import { uploadParaStorage } from './uploaderStorage.js';
 import { supabase } from './supabaseClient.js';
+import { LOGS_DIR } from './config/caminhos.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -16,9 +17,10 @@ async function iniciarImportador() {
   const MAX_PAGINAS_TESTE = 50;
   const MAX_RECORTES_TESTE = 100;
   const MAX_RECORTES_POR_PAGINA = 3;
+  const DELAY_ENTRE_PAGINAS_MS = 3000;
   
   // Inicialização do Log de Execução
-  const logsDir = path.resolve('catalogo-service/logs');
+  const logsDir = LOGS_DIR;
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
   }
@@ -51,7 +53,7 @@ async function iniciarImportador() {
     const catalogos = await listarCatalogos(FORNECEDOR_SLUG);
     
     if (catalogos.length === 0) {
-      const msg = '⚠️ Nenhum PDF de tamanho válido (≤ 150 MB) encontrado em portinari/catalogos no Storage.';
+      const msg = '⚠️ Nenhum PDF de tamanho válido (≤ 150 MB) encontrado nas pastas de catálogo da Portinari no Storage.';
       console.log(msg);
       logExecucao.falhas.push(msg);
       salvarLogLocal(logExecucao, logsDir);
@@ -146,7 +148,7 @@ async function iniciarImportador() {
     }
 
     // 3. Baixar o PDF localmente
-    const localPdfPath = await baixarPdfLocal(FORNECEDOR_SLUG, pdfEscolhido.name);
+    const localPdfPath = await baixarPdfLocal(FORNECEDOR_SLUG, pdfEscolhido);
     
     // 4. Renderizar as primeiras páginas (limitadas estritamente a MAX_PAGINAS_TESTE = 3)
     const pastaSaidaSlug = nomeCatalogo.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -158,8 +160,8 @@ async function iniciarImportador() {
     for (const pag of paginasRenderizadas) {
       // Atraso de 1 segundo entre as páginas (Rate Limit)
       if (pag.numero > 1) {
-        console.log('⏱️ Aguardando 1 segundo para rate limit...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log(`⏱️ Aguardando ${DELAY_ENTRE_PAGINAS_MS / 1000} segundos para rate limit...`);
+        await new Promise(resolve => setTimeout(resolve, DELAY_ENTRE_PAGINAS_MS));
       }
 
       console.log(`\n📄 --- Processando Página ${pag.numero}/${paginasRenderizadas.length} ---`);
