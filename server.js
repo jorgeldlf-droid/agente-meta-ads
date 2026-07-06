@@ -3,6 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import path from "path";
+import { sincronizarCatalogosStorage } from "./catalogo-service/src/sincronizarCatalogosStorage.js";
+import { importarPdfsSincronizados } from "./catalogo-service/src/importarPdfsSincronizados.js";
+import { REGISTRO_FORNECEDORES } from "./catalogo-service/src/registroFornecedores.js";
 
 dotenv.config();
 dotenv.config({ path: path.resolve(process.cwd(), 'catalogo-service/.env') });
@@ -20,44 +23,48 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const fornecedores = [
-  "Portinari",
-  "Ceusa",
-  "Eliane",
-  "Elizabeth",
-  "Embramaco",
-  "Roca",
-  "Incepa",
-  "Delta",
-  "Delta Nova",
-];
+const FORNECEDORES = Object.fromEntries(
+  REGISTRO_FORNECEDORES.map(({ nome, slug, site, dominios }) => [
+    nome,
+    {
+      slug,
+      links: [site.endsWith("/") ? site : `${site}/`],
+      dominios,
+    },
+  ])
+);
 
-const fornecedoresGerarPosts = ["Portinari", "Ceusa", "Eliane"];
+const fornecedores = Object.keys(FORNECEDORES);
+const fornecedoresGerarPosts = [...fornecedores];
 const fornecedorGeralPosts = "Geral";
 
-const linksFornecedores = {
-  Portinari: ["https://www.portinari.com.br/"],
-  Ceusa: ["https://www.ceusa.com.br/"],
-  Eliane: ["https://www.eliane.com/"],
-  Elizabeth: ["https://www.grupoelizabeth.com.br/"],
-  Embramaco: ["https://www.embramaco.com.br/"],
-  Roca: ["https://www.roca.com.br/"],
-  Incepa: ["https://www.incepa.com.br/"],
-  Delta: ["https://www.deltaceramica.com.br/"],
-  "Delta Nova": ["https://www.deltaceramica.com.br/"],
-};
+const linksFornecedores = Object.fromEntries(
+  fornecedores.map((nome) => [nome, FORNECEDORES[nome].links])
+);
+const dominiosOficiais = Object.fromEntries(
+  fornecedores.map((nome) => [nome, FORNECEDORES[nome].dominios])
+);
 
-const dominiosOficiais = {
-  Portinari: ["portinari.com.br"],
-  Ceusa: ["ceusa.com.br"],
-  Eliane: ["eliane.com"],
-  Elizabeth: ["grupoelizabeth.com.br"],
-  Embramaco: ["embramaco.com.br"],
-  Roca: ["roca.com.br"],
-  Incepa: ["incepa.com.br"],
-  Delta: ["deltaceramica.com.br"],
-  "Delta Nova": ["deltaceramica.com.br"],
-};
+function obterConfigFornecedor(fornecedor = "") {
+  if (!fornecedor) return null;
+  if (FORNECEDORES[fornecedor]) {
+    return { nome: fornecedor, ...FORNECEDORES[fornecedor] };
+  }
+  const match = fornecedores.find(
+    (nome) => nome.toLowerCase() === String(fornecedor).toLowerCase()
+  );
+  return match ? { nome: match, ...FORNECEDORES[match] } : null;
+}
+
+function obterSlugStorageFornecedor(fornecedor = "") {
+  return obterConfigFornecedor(fornecedor)?.slug ?? null;
+}
+
+function urlImagemPertenceAoFornecedor(url = "", fornecedor = "") {
+  const slug = obterSlugStorageFornecedor(fornecedor);
+  if (!slug || !url) return false;
+  return String(url).toLowerCase().includes(`/${slug.toLowerCase()}/`);
+}
 
 function limparJson(texto) {
   return String(texto || "")
@@ -205,9 +212,15 @@ function removerMarcasConflitantes(texto = "", fornecedorEscolhido) {
 
 function obterFornecedorDaImagemBanco(url = "") {
   const lower = String(url || "").toLowerCase();
-  return fornecedoresGerarPosts.find((fornecedor) =>
-    lower.includes(`/${fornecedor.toLowerCase()}/`)
-  ) || null;
+  const fornecedoresOrdenados = [...fornecedoresGerarPosts].sort((a, b) => {
+    const slugA = obterSlugStorageFornecedor(a) || "";
+    const slugB = obterSlugStorageFornecedor(b) || "";
+    return slugB.length - slugA.length;
+  });
+  return fornecedoresOrdenados.find((fornecedor) => {
+    const slug = obterSlugStorageFornecedor(fornecedor);
+    return slug && lower.includes(`/${slug}/`);
+  }) || null;
 }
 
 function ambienteCombinaTema(ambiente, textoBusca = "", eTemaExterno = false) {
@@ -1450,8 +1463,8 @@ async function obterProdutosValidadosBanco(fornecedoresPermitidos = fornecedores
       
       // Filtra dinamicamente os ambientes que pertencem a este fornecedor
       const ambientesF = ambientesDb.filter(amb => 
-        amb.url_imagem && 
-        amb.url_imagem.toLowerCase().includes(`/${f.nome.toLowerCase()}/`)
+        amb.url_imagem &&
+        urlImagemPertenceAoFornecedor(amb.url_imagem, f.nome)
       );
       
       if (ambientesF.length === 0) {
@@ -1532,7 +1545,7 @@ Formato obrigatório para CADA POST:
 ]
 Regras:
 - O scoreComercial deve ser numérico (0 a 100).
-- Para post de produto, fornecedor deve ser exatamente Portinari, Ceusa ou Eliane.
+- Para post de produto, fornecedor deve ser exatamente um destes: ${fornecedoresGerarPosts.join(", ")}.
 - Para post educativo/genérico, fornecedor deve ser "Geral" e produto deve ficar vazio.
 - Quando o tema comparar dois produtos, acabamentos ou categorias, cite explicitamente os dois nomes completos durante toda a legenda. Nunca substitua por termos genéricos ou pronomes como "o produto", "o porcelanato", "ele", "o mesmo" ou "o". Exemplo correto: "o porcelanato polido possui brilho intenso" e "o porcelanato acetinado possui acabamento fosco". Exemplo incorreto: "o porcelanato possui brilho intenso" ou "já o possui acabamento fosco".
 - Não use nomes de campanhas internas como base principal para tema, gancho, legenda ou CTA. Evite citar "Exterminador do Prejuízo", "Matrix Descontos", "Convocação", "Operação" ou expressões como "campanha [nome da campanha]", salvo autorização explícita no pedido.
@@ -1554,7 +1567,7 @@ MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
 0.2. Use os ambientes oficiais prioritários acima como ponto de partida: primeiro produto/imagem real, depois tema, gancho, legenda e CTA.
 0.3. Use o campo "Uso/acabamento interpretado" para adequar a promessa do post: externo, interno, polido, natural, acetinado ou antiderrapante.
 0.4. Não repita a mesma URL de imagem oficial em posts diferentes.
-1. Para fornecedores que possuem "Ambientes Oficiais/Validados" listados no contexto acima (como Portinari): 
+1. Para fornecedores que possuem "Ambientes Oficiais/Validados" listados no contexto acima:
    - Crie posts comerciais focados EXCLUSIVAMENTE em um desses ambientes reais do banco.
    - Use exatamente o nome/descrição real fornecido no contexto.
    - Preencha "produto" com essa descrição real.
@@ -1563,7 +1576,6 @@ MUITO IMPORTANTE - REGRAS DE CONSISTÊNCIA E VALIDAÇÃO:
    - Você está terminantemente PROIBIDO de citar qualquer nome de modelo técnico, coleção fictícia, formato (medida) ou acabamento (como "Urban Acetinado", "60x120").
    - Crie posts de INSPIRAÇÃO GENÉRICA e de tendências de design de interiores associadas a essa marca (ex: "A elegância dos porcelanatos Ceusa", "Como paginar ambientes com Ceusa").
    - Nesses posts genéricos, deixe o campo "promptImagem" em branco ou descreva um prompt abstrato e marque a "imagemOficial" como null.
-3. Não cite Elizabeth, Embramaco, Roca, Incepa, Delta ou Delta Nova nesta sessão.
 
 Defina categoriaEstrategica como "Fornecedor".
 ${baseSchema}`;
@@ -1664,13 +1676,15 @@ ${baseSchema}`;
         );
 
         // 1. Extrair fornecedores individuais (tratando múltiplos fornecedores)
-        const nomesFornecedores = fornecedorBuscaImagem.split(',')
-          .map(s => s.trim().toLowerCase())
-          .filter(s => s && s !== "não identificado");
+        const fornecedoresPost = fornecedorBuscaImagem.split(',')
+          .map((s) => s.trim())
+          .map((parte) => obterFornecedorBusca(parte, fornecedoresGerarPosts))
+          .filter((fornecedor) => fornecedor && fornecedor.toLowerCase() !== "não identificado");
 
         // 2. Verificar se algum dos fornecedores tem catálogo no banco
-        const fornecedoresComCatalogo = nomesFornecedores.filter(nome => 
-          (ambientesDb || []).some(amb => amb.url_imagem && amb.url_imagem.toLowerCase().includes(`/${nome}/`))
+        const fornecedoresComCatalogo = fornecedoresPost.filter((fornecedor, index, lista) =>
+          lista.indexOf(fornecedor) === index &&
+          (ambientesDb || []).some((amb) => urlImagemPertenceAoFornecedor(amb.url_imagem, fornecedor))
         );
         const temCatalogoBanco = fornecedoresComCatalogo.length > 0;
 
@@ -1732,7 +1746,7 @@ ${baseSchema}`;
             // O fornecedor TEM catálogo, vamos pegar um ambiente real do banco!
             const ambientesF = (ambientesDb || []).filter(amb => 
               amb.url_imagem && 
-              fornecedoresComCatalogo.some(nome => amb.url_imagem.toLowerCase().includes(`/${nome}/`))
+              fornecedoresComCatalogo.some((fornecedor) => urlImagemPertenceAoFornecedor(amb.url_imagem, fornecedor))
             );
 
             if (ambientesF.length > 0) {
@@ -1816,8 +1830,7 @@ ${baseSchema}`;
         let legendaFinal = legendaSegura;
 
         if (imagemOficialStatus === "validada_catalogo" && typeof imagemOficial === "string" && imagemOficial.startsWith("http")) {
-          const marcasConhecidas = ["Portinari", "Ceusa", "Eliane", "Elizabeth", "Embramaco", "Roca", "Incepa", "Delta", "Delta Nova"];
-          const donoImagem = marcasConhecidas.find(marca => imagemOficial.toLowerCase().includes(`/${marca.toLowerCase()}/`));
+          const donoImagem = obterFornecedorDaImagemBanco(imagemOficial);
 
           if (donoImagem) {
             if (fornecedor.includes(",")) {
@@ -1825,7 +1838,7 @@ ${baseSchema}`;
               // e não alteramos a legenda, preservando o texto original
               fornecedorFinal = fornecedor;
             } else {
-              const outrosFornecedores = marcasConhecidas.filter(m => m.toLowerCase() !== donoImagem.toLowerCase());
+              const outrosFornecedores = fornecedoresGerarPosts.filter(m => m.toLowerCase() !== donoImagem.toLowerCase());
               
               const citaOutrosLegenda = outrosFornecedores.some(m => legendaFinal.toLowerCase().includes(m.toLowerCase()));
               const citaOutrosTema = outrosFornecedores.some(m => temaFinal.toLowerCase().includes(m.toLowerCase()));
@@ -1834,7 +1847,7 @@ ${baseSchema}`;
               if (citaOutrosLegenda || citaOutrosTema || citaOutrosGancho) {
                 console.log(`[Gerar Posts] ⚠️ Conflito de Fornecedor: Imagem é de ${donoImagem}, mas o post cita outros.`);
                 
-                const marcasOrdenadas = [...marcasConhecidas].sort((a, b) => b.length - a.length);
+                const marcasOrdenadas = [...fornecedoresGerarPosts].sort((a, b) => b.length - a.length);
                 const marcaRegexStr = marcasOrdenadas.map(m => m.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
 
                 // Regex para sequências de pelo menos 2 marcas separadas por vírgula, mais, barra, "e", "ou" ou espaços
@@ -2028,4 +2041,10 @@ Servidor rodando na porta ${PORT}
 http://localhost:${PORT}
 ========================================
 `);
+
+  setImmediate(() => {
+    sincronizarCatalogosStorage({ origem: "startup" })
+      .then((resultado) => importarPdfsSincronizados(resultado?.pdfsParaImportar || []))
+      .catch((err) => console.error("[Sync Catálogos] Erro inesperado:", err.message));
+  });
 });

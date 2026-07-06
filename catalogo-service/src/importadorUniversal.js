@@ -7,48 +7,26 @@ import { supabase } from './supabaseClient.js';
 import { LOGS_DIR } from './config/caminhos.js';
 import { limparCatalogoExistente } from './limparCatalogoExistente.js';
 import { gerarPastaSaidaSlug } from './gerarPastaSaidaSlug.js';
+import {
+  normalizarCategoriaAmbiente,
+  formatarDescricaoAmbiente,
+} from './normalizarCategoriaAmbiente.js';
+import { normalizarMetadadosAmbiente } from './normalizarMetadadosAmbiente.js';
+import {
+  REGISTRO_FORNECEDORES,
+} from './registroFornecedores.js';
 import path from 'path';
 import fs from 'fs';
 
-// Mapeamento de Configurações por Fornecedor
-const MAPA_FORNECEDORES = {
-  portinari: {
-    nome: 'Portinari',
-    site: 'https://www.ceramicaportinari.com.br'
-  },
-  ceusa: {
-    nome: 'Ceusa',
-    site: 'https://www.ceusa.com.br'
-  },
-  eliane: {
-    nome: 'Eliane',
-    site: 'https://www.eliane.com'
-  },
-  elizabeth: {
-    nome: 'Elizabeth',
-    site: 'https://www.grupoelizabeth.com.br'
-  },
-  embramaco: {
-    nome: 'Embramaco',
-    site: 'https://www.embramaco.com.br'
-  },
-  roca: {
-    nome: 'Roca',
-    site: 'https://www.roca.com.br'
-  },
-  incepa: {
-    nome: 'Incepa',
-    site: 'https://www.incepa.com.br'
-  },
-  delta: {
-    nome: 'Delta',
-    site: 'https://www.deltaceramica.com.br'
-  },
-  'delta-nova': {
-    nome: 'Delta Nova',
-    site: 'https://www.deltaceramica.com.br'
-  }
-};
+const MAPA_FORNECEDORES = Object.fromEntries(
+  REGISTRO_FORNECEDORES.map((fornecedor) => [
+    fornecedor.slug,
+    {
+      nome: fornecedor.nome,
+      site: fornecedor.site,
+    },
+  ])
+);
 
 function normalizarFornecedorArg(valor = '') {
   return String(valor || '')
@@ -362,13 +340,29 @@ async function iniciarImportador() {
           );
 
           console.log(`💾 Registrando ambiente recortado ("${rec.descricao}") no banco...`);
+          const descricaoOriginal = rec.descricao || `Ambiente recortado da página ${pag.numero}`;
+
+          const metadadosVisuais = normalizarMetadadosAmbiente({
+            categoria: rec.categoria,
+            estilo: rec.estilo,
+            tonalidade: rec.tonalidade,
+            sensacao: rec.sensacao,
+            descricaoOriginal,
+          });
+          rec.metadadosVisuais = metadadosVisuais;
+
+          const descricaoPadronizada = formatarDescricaoAmbiente(
+            metadadosVisuais.categoria,
+            descricaoOriginal
+          );
+
           const { error: errInsAmbiente } = await supabase
             .from('imagens_catalogo')
             .insert({
               pagina: pag.numero,
               url_imagem: urlAmbienteStorage,
               tipo: 'ambiente',
-              descricao: rec.descricao || `Ambiente recortado da página ${pag.numero}`
+              descricao: descricaoPadronizada
             });
 
           if (errInsAmbiente) {

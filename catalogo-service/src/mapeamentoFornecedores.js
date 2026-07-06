@@ -1,13 +1,17 @@
-const MAPA_PASTA_PARA_SLUG = {
-  'CEUSA': 'ceusa',
-  'PORTINARI': 'portinari',
-  'ELIANE': 'eliane',
-  'DELTA': 'delta',
-  'DELTA NOVA': 'delta-nova',
-  'ELIZABETH': 'elizabeth',
-  'EMBRAMACO': 'embramaco',
-  'INCEPA': 'incepa',
+import { REGISTRO_FORNECEDORES } from './registroFornecedores.js';
+
+const ALIASES_PASTA_PARA_SLUG = {
   'ROCA CERÂMICA': 'roca',
+};
+
+const MAPA_PASTA_PARA_SLUG = {
+  ...Object.fromEntries(
+    REGISTRO_FORNECEDORES.map((fornecedor) => [
+      fornecedor.nome.toUpperCase(),
+      fornecedor.slug,
+    ])
+  ),
+  ...ALIASES_PASTA_PARA_SLUG,
 };
 
 const FORNECEDOR_IGNORADO_V1 = 'GABRIELLA CERÂMICA';

@@ -686,13 +686,66 @@ Regras de Detecção:
 7. Se você identificar fotos de ambientes reais revestidos, retorne a coordenada de corte normalizada de 0 a 1000, delimitando apenas a foto limpa do ambiente.
 8. Caso a imagem esteja confusa, as divisões não estejam claras, ou você não tenha certeza se é um ambiente decorado ou apenas uma textura grande, defina a "confianca_geral" como "baixa" e descreva o motivo.
 
+Categorias permitidas para o campo "categoria" (use exatamente uma destas):
+- Cozinha
+- Banheiro
+- Sala
+- Área Gourmet
+- Fachada
+- Lavanderia
+- Quarto
+- Comercial
+- Externo
+- Outros
+
+Use "Outros" apenas quando nenhuma categoria acima se aplicar com clareza.
+
+Estilos permitidos para o campo "estilo" (use exatamente um destes):
+- Moderno
+- Contemporâneo
+- Clássico
+- Rústico
+- Industrial
+- Minimalista
+- Sofisticado
+- Natural
+- Outros
+
+Tonalidades permitidas para o campo "tonalidade" (use exatamente uma destas):
+- Branco
+- Bege
+- Cinza claro
+- Cinza escuro
+- Preto
+- Marrom
+- Madeira
+- Colorido
+- Outros
+
+Sensações permitidas para o campo "sensacao" (use exatamente uma destas):
+- Aconchegante
+- Clean
+- Luxuoso
+- Minimalista
+- Natural
+- Urbano
+- Elegante
+- Funcional
+- Outros
+
+Para estilo, tonalidade e sensacao, use "Outros" quando não houver clareza visual suficiente.
+
 Retorne EXATAMENTE um objeto JSON estruturado no formato abaixo, sem nenhum tipo de formatação markdown, texto introdutório ou tag de código (ex: \`\`\`json):
 {
   "confianca_geral": "alta" | "baixa",
   "motivo_confianca": "Breve justificativa caso seja baixa ou alta",
   "ambientes": [
     {
-      "descricao": "Nome descritivo simples do ambiente (ex: Banheiro Decorado)",
+      "descricao": "Nome descritivo simples do ambiente (ex: Banheiro decorado com porcelanato marmorizado)",
+      "categoria": "Banheiro",
+      "estilo": "Contemporâneo",
+      "tonalidade": "Cinza claro",
+      "sensacao": "Minimalista",
       "ymin": 0 a 1000,
       "xmin": 0 a 1000,
       "ymax": 0 a 1000,
@@ -857,6 +910,10 @@ export async function recortarAmbientes(caminhoImagemLocal, ambientes, outputDir
 
       recortes.push({
         descricao: amb.descricao || `Ambiente Recortado ${i + 1}`,
+        categoria: amb.categoria || null,
+        estilo: amb.estilo || null,
+        tonalidade: amb.tonalidade || null,
+        sensacao: amb.sensacao || null,
         caminhoLocal: outputPath,
         nomeArquivo: outputFilename,
         coordenadas: {
