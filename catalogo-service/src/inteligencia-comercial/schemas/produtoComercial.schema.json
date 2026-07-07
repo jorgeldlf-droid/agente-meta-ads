@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://porcelanatoshop.local/schemas/produtoComercial.schema.json",
+  "title": "ProdutoComercialExtraido",
+  "description": "Formato esperado para produto extraído de catálogo PDF (entrada bruta antes da normalização). Sprint 3.2A — sem IA integrada.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "catalogo_id": { "type": ["string", "null"] },
+    "fornecedor_id": { "type": ["string", "null"] },
+    "pagina_origem": { "type": ["integer", "null"], "minimum": 1 },
+    "linha_produto": { "type": ["string", "null"] },
+    "colecao": { "type": ["string", "null"] },
+    "nome_produto": { "type": ["string", "null"] },
+    "formato": { "type": ["string", "null"] },
+    "espessura": { "type": ["string", "null"] },
+    "acabamento": { "type": ["string", "null"] },
+    "retificado": { "type": ["string", "null"] },
+    "variacao_tonalidade": {
+      "type": ["string", "null"],
+      "enum": ["V1", "V2", "V3", "V4", null]
+    },
+    "visual": { "type": ["string", "null"] },
+    "cor": { "type": ["string", "null"] },
+    "estilo": { "type": ["string", "null"] },
+    "uso": { "type": ["string", "null"] },
+    "categoria": { "type": ["string", "null"] },
+    "ambientes_indicados": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ambientes_nao_indicados": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "palavras_chave": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "resumo_ia": { "type": ["string", "null"] },
+    "confianca_extracao": {
+      "type": "string",
+      "enum": ["alta", "media", "baixa"]
+    },
+    "versao_extrator": { "type": "string" },
+    "url_imagem_referencia": { "type": ["string", "null"] },
+    "metadados_brutos": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
