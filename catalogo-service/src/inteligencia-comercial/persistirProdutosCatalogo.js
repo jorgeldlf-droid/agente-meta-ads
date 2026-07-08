@@ -41,23 +41,80 @@ export async function verificarTabelaProdutosCatalogoDisponivel() {
 }
 
 /**
- * Resolve catalogo_id e fornecedor_id por slug + nome do catálogo.
+ * Resolve catalogo_id e fornecedor_id por slug.
+ * Catálogo: prioriza arquivo_pdf; fallback por nome.
  * Não cria registros automaticamente.
  */
+async function buscarCatalogoPorArquivoPdf(fornecedorId, arquivoPdf) {
+  const arquivo = String(arquivoPdf || '').trim();
+  if (!arquivo) return null;
+
+  const { data, error } = await supabase
+    .from('catalogos')
+    .select('id,nome,arquivo_pdf,fornecedor_id')
+    .eq('fornecedor_id', fornecedorId)
+    .eq('arquivo_pdf', arquivo);
+
+  if (error) {
+    throw new Error(`Erro ao buscar catálogo por arquivo_pdf: ${error.message}`);
+  }
+
+  if (!data?.length) return null;
+
+  if (data.length > 1) {
+    const ids = data.map((c) => c.id).join(', ');
+    throw new Error(
+      `Múltiplos catálogos encontrados para arquivo_pdf "${arquivo}" ` +
+      `(fornecedor_id=${fornecedorId}): ids [${ids}]. Corrija a duplicidade no banco.`
+    );
+  }
+
+  return data[0];
+}
+
+async function buscarCatalogoPorNome(fornecedorId, nomeCatalogo) {
+  const nome = String(nomeCatalogo || '').trim();
+  if (!nome) return null;
+
+  const { data, error } = await supabase
+    .from('catalogos')
+    .select('id,nome,arquivo_pdf,fornecedor_id')
+    .eq('fornecedor_id', fornecedorId)
+    .eq('nome', nome);
+
+  if (error) {
+    throw new Error(`Erro ao buscar catálogo por nome: ${error.message}`);
+  }
+
+  if (!data?.length) return null;
+
+  if (data.length > 1) {
+    const ids = data.map((c) => c.id).join(', ');
+    throw new Error(
+      `Múltiplos catálogos encontrados para nome "${nome}" ` +
+      `(fornecedor_id=${fornecedorId}): ids [${ids}]. Corrija a duplicidade no banco.`
+    );
+  }
+
+  return data[0];
+}
+
 export async function resolverRelacionamentosComerciais({
   fornecedorSlug,
   nomeCatalogo,
+  arquivoPdf,
 } = {}) {
   await verificarTabelaProdutosCatalogoDisponivel();
 
   const slug = String(fornecedorSlug || '').trim().toLowerCase();
   const nomeCat = String(nomeCatalogo || '').trim();
+  const arquivo = String(arquivoPdf || '').trim();
 
   if (!slug) {
     throw new Error('fornecedorSlug é obrigatório para persistência.');
   }
-  if (!nomeCat) {
-    throw new Error('nomeCatalogo é obrigatório para persistência.');
+  if (!arquivo && !nomeCat) {
+    throw new Error('arquivoPdf ou nomeCatalogo é obrigatório para persistência.');
   }
 
   const { data: fornecedor, error: errForn } = await supabase
@@ -74,20 +131,18 @@ export async function resolverRelacionamentosComerciais({
     throw new Error(`Fornecedor não encontrado no banco para slug: ${slug}`);
   }
 
-  const { data: catalogo, error: errCat } = await supabase
-    .from('catalogos')
-    .select('*')
-    .eq('nome', nomeCat)
-    .eq('fornecedor_id', fornecedor.id)
-    .maybeSingle();
+  let catalogo = await buscarCatalogoPorArquivoPdf(fornecedor.id, arquivo);
+  let metodoResolucao = 'arquivo_pdf';
 
-  if (errCat) {
-    throw new Error(`Erro ao buscar catálogo: ${errCat.message}`);
+  if (!catalogo) {
+    catalogo = await buscarCatalogoPorNome(fornecedor.id, nomeCat);
+    metodoResolucao = 'nome';
   }
 
   if (!catalogo) {
     throw new Error(
-      `Catálogo não encontrado: "${nomeCat}" para fornecedor slug "${slug}". ` +
+      `Catálogo não encontrado para fornecedor slug "${slug}". ` +
+      `Tentativas: arquivo_pdf="${arquivo || '(vazio)'}", nome="${nomeCat || '(vazio)'}". ` +
       'Cadastre o catálogo via importador antes de usar --persistir.'
     );
   }
@@ -97,6 +152,7 @@ export async function resolverRelacionamentosComerciais({
     fornecedor,
     catalogo_id: catalogo.id,
     fornecedor_id: fornecedor.id,
+    metodo_resolucao_catalogo: metodoResolucao,
   };
 }
 

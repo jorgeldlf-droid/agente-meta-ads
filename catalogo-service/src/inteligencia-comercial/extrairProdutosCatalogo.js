@@ -291,6 +291,7 @@ export async function extrairProdutosCatalogo({
       const relacionamentos = await resolverRelacionamentosComerciais({
         fornecedorSlug,
         nomeCatalogo,
+        arquivoPdf: nomePdf,
       });
 
       const resumoPersistencia = await persistirProdutosCatalogo({
@@ -306,6 +307,7 @@ export async function extrairProdutosCatalogo({
         tempo_ms: resumoPersistencia.tempo_ms,
         catalogo_id: relacionamentos.catalogo_id,
         fornecedor_id: relacionamentos.fornecedor_id,
+        metodo_resolucao_catalogo: relacionamentos.metodo_resolucao_catalogo,
         catalogo: relacionamentos.catalogo,
         fornecedor: relacionamentos.fornecedor,
       };
