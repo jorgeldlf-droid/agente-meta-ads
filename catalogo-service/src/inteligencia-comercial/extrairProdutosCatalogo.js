@@ -10,6 +10,10 @@ import { VERSAO_EXTRATOR_PRODUTO } from './normalizarProdutoComercial.js';
 import { extrairTextoPaginaPdf } from './extrairTextoPaginaPdf.js';
 import { classificarPaginaProduto, paginaEhComercial } from './classificarPaginaProduto.js';
 import { extrairProdutoPagina } from './extrairProdutoPagina.js';
+import {
+  persistirProdutosCatalogo,
+  resolverRelacionamentosComerciais,
+} from './persistirProdutosCatalogo.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), 'catalogo-service/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -124,6 +128,10 @@ function obterArg(prefixo) {
   return idx >= 0 ? process.argv[idx + 1] : null;
 }
 
+function obterFlag(nome) {
+  return process.argv.includes(nome);
+}
+
 function logPaginaResumo(pagina, classificacao, extracao) {
   console.log(`\nPágina ${pagina}`);
   console.log(`Tipo:\n${classificacao.tipo}`);
@@ -160,6 +168,7 @@ export async function extrairProdutosCatalogo({
   nomePdf,
   maxPaginas = 50,
   pdfLocalPath = null,
+  persistir = false,
 }) {
   const inicioMs = Date.now();
   const stats = criarEstatisticas();
@@ -275,7 +284,50 @@ export async function extrairProdutosCatalogo({
   console.log(`\n📄 Auditoria salva em: ${arquivoSaida}`);
   console.log(`⏱️ Tempo: ${relatorio.tempo_processamento_ms}ms`);
   console.log(`📊 Completude média: ${stats.completude_media_percentual}%`);
-  console.log('Nenhum dado foi gravado no banco.');
+
+  if (persistir) {
+    console.log('\nPersistindo produtos válidos...');
+    try {
+      const relacionamentos = await resolverRelacionamentosComerciais({
+        fornecedorSlug,
+        nomeCatalogo,
+      });
+
+      const resumoPersistencia = await persistirProdutosCatalogo({
+        catalogoId: relacionamentos.catalogo_id,
+        fornecedorId: relacionamentos.fornecedor_id,
+        produtos: relatorio.produtos,
+      });
+
+      relatorio.persistencia = {
+        persistidos: resumoPersistencia.persistidos,
+        ignorados: resumoPersistencia.ignorados,
+        erros: resumoPersistencia.erros,
+        tempo_ms: resumoPersistencia.tempo_ms,
+        catalogo_id: relacionamentos.catalogo_id,
+        fornecedor_id: relacionamentos.fornecedor_id,
+        catalogo: relacionamentos.catalogo,
+        fornecedor: relacionamentos.fornecedor,
+      };
+
+      console.log(`Produtos persistidos: ${resumoPersistencia.persistidos}`);
+      console.log(`Produtos ignorados: ${resumoPersistencia.ignorados}`);
+
+      if (resumoPersistencia.erros.length > 0) {
+        console.log(`Erros na persistência: ${resumoPersistencia.erros.length}`);
+      }
+    } catch (error) {
+      relatorio.persistencia = {
+        persistidos: 0,
+        ignorados: 0,
+        erros: [{ erros: [error.message] }],
+        tempo_ms: 0,
+      };
+      console.error(`❌ Falha na persistência: ${error.message}`);
+    }
+  } else {
+    console.log('Nenhum dado foi gravado no banco.');
+  }
 
   return relatorio;
 }
@@ -285,9 +337,12 @@ async function main() {
   const nomePdf = obterArg('--pdf');
   const maxPaginas = Number(obterArg('--max-paginas') || 50);
   const pdfLocal = obterArg('--pdf-local');
+  const persistir = obterFlag('--persistir');
 
   if (!fornecedorSlug || (!nomePdf && !pdfLocal)) {
-    console.error('Uso: node src/inteligencia-comercial/extrairProdutosCatalogo.js --fornecedor=delta --pdf="Delta Evidence 35x70.pdf"');
+    console.error(
+      'Uso: node src/inteligencia-comercial/extrairProdutosCatalogo.js --fornecedor=delta --pdf="Delta Evidence 35x70.pdf" [--persistir]'
+    );
     process.exit(1);
   }
 
@@ -296,6 +351,7 @@ async function main() {
     nomePdf: nomePdf || path.basename(pdfLocal),
     maxPaginas,
     pdfLocalPath: pdfLocal,
+    persistir,
   });
 }
 

@@ -1,16 +1,15 @@
 -- Sprint 3.2A — Infraestrutura comercial (sem IA, sem integração ao importador)
 --
--- IMPORTANTE:
--- Antes de executar esta migration, confirme no Supabase o tipo real de:
---   - public.catalogos.id
---   - public.fornecedores.id
--- Se forem bigint/integer em vez de uuid, ajuste os tipos abaixo antes de rodar.
+-- Esquema verificado:
+--   - public.catalogos.id = bigint
+--   - public.fornecedores.id = bigint
+--   - public.produtos_catalogo.id = uuid (gen_random_uuid())
 
 CREATE TABLE IF NOT EXISTS public.produtos_catalogo (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  catalogo_id uuid NOT NULL REFERENCES public.catalogos(id) ON DELETE CASCADE,
-  fornecedor_id uuid NOT NULL REFERENCES public.fornecedores(id) ON DELETE CASCADE,
+  catalogo_id bigint NOT NULL REFERENCES public.catalogos(id) ON DELETE CASCADE,
+  fornecedor_id bigint NOT NULL REFERENCES public.fornecedores(id) ON DELETE CASCADE,
 
   pagina_origem integer,
 
